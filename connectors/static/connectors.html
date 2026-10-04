@@ -39,7 +39,7 @@
 
     <section>
       <h2>Add a connector</h2>
-      <div id="presets" class="presets"></div>
+      <div id="presets"></div>
 
       <form id="add-form" class="card">
         <div class="tabs" role="tablist">
@@ -48,20 +48,27 @@
         </div>
         <label for="name">Name</label>
         <input id="name" placeholder="e.g. Files" required maxlength="40">
-        <div class="local-only">
-          <label for="command">Command</label>
-          <input id="command" placeholder="e.g. npx, uvx, python">
-          <label for="args">Arguments <span class="muted">(one per line)</span></label>
-          <textarea id="args" rows="3" placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;~/Documents"></textarea>
-          <label for="env">Environment variables <span class="muted">(optional, one KEY=value per line, e.g. API keys)</span></label>
-          <textarea id="env" rows="2"></textarea>
+        <div id="preset-box" hidden>
+          <p id="preset-setup" class="small"></p>
+          <div id="preset-fields"></div>
         </div>
-        <div class="remote-only" hidden>
-          <label for="url">URL</label>
-          <input id="url" placeholder="https://example.com/mcp">
-          <label for="token">Access token <span class="muted">(optional)</span></label>
-          <input id="token" placeholder="Sent as: Authorization: Bearer ...">
-        </div>
+        <details id="advanced" open>
+          <summary>Command and settings</summary>
+          <div class="local-only">
+            <label for="command">Command</label>
+            <input id="command" placeholder="e.g. npx, uvx, python">
+            <label for="args">Arguments <span class="muted">(one per line)</span></label>
+            <textarea id="args" rows="3" placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;~/Documents"></textarea>
+            <label for="env">Environment variables <span class="muted">(optional, one KEY=value per line, e.g. API keys)</span></label>
+            <textarea id="env" rows="2"></textarea>
+          </div>
+          <div class="remote-only" hidden>
+            <label for="url">URL</label>
+            <input id="url" placeholder="https://example.com/mcp">
+            <label for="token">Access token <span class="muted">(optional)</span></label>
+            <input id="token" placeholder="Sent as: Authorization: Bearer ...">
+          </div>
+        </details>
         <div class="row">
           <button type="submit" class="primary" id="add-btn">Add and connect</button>
           <span id="add-note" class="muted"></span>

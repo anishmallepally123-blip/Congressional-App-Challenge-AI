@@ -35,6 +35,21 @@ class MCPError(Exception):
     """Anything that went wrong talking to a connector, in words a user can read."""
 
 
+# What to install when a connector's program is missing.
+NEEDS = {
+    "npx": "Node.js (nodejs.org)", "node": "Node.js (nodejs.org)", "npm": "Node.js (nodejs.org)",
+    "uvx": "uv (docs.astral.sh/uv)", "uv": "uv (docs.astral.sh/uv)",
+    "docker": "Docker Desktop (docker.com)", "deno": "Deno (deno.com)", "bunx": "Bun (bun.sh)",
+}
+
+
+def find_command(command):
+    """The full path of a program, or None if it isn't installed. On Windows, `npx` is really `npx.cmd`."""
+    if command in ("python", "python3", "py"):
+        return sys.executable
+    return shutil.which(command)
+
+
 def _tool_result_text(result):
     """Turn a tools/call result into plain text the model can read."""
     parts = []
@@ -103,11 +118,15 @@ class StdioConnection(_Connection):
 
     def _spawn(self, command, args, env, cwd):
         # "python" works the same on every computer: use the Python running this app.
-        if command in ("python", "python3", "py"):
-            exe = sys.executable
-        else:
-            # On Windows, `npx` is really `npx.cmd`; which() finds it.
-            exe = shutil.which(command) or command
+        exe = find_command(command)
+        if not exe and not os.path.isabs(command):
+            name = os.path.basename(command).lower().removesuffix(".exe").removesuffix(".cmd")
+            if name in NEEDS:
+                raise MCPError(f"This connector needs {NEEDS[name]}, which isn't installed on this computer. "
+                               "Install it, restart the app, then press Reconnect. Or pick a preset marked "
+                               "\"Nothing extra\", which works without it.")
+            raise MCPError(f"Could not start `{command}`: it isn't installed, or it isn't on this computer's PATH.")
+        exe = exe or command
         full_env = {**os.environ, **{k: str(v) for k, v in env.items()}}
         flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
         try:
@@ -178,9 +197,11 @@ class StdioConnection(_Connection):
         except subprocess.TimeoutExpired:
             pass
         self._stderr_thread.join(timeout=1)  # so its last words are in the message
-        detail = "\n".join(list(self._stderr)[-5:])
-        msg = f"The connector program stopped (exit code {self._proc.poll()})."
-        return f"{msg}\n{detail}" if detail else msg
+        detail = "\n".join(line for line in list(self._stderr)[-5:] if line.strip())
+        code = self._proc.poll()
+        if detail:  # the program's own last words usually say what's wrong, so show them first
+            return f"{detail}\n(The connector program stopped, exit code {code}.)"
+        return f"The connector program stopped (exit code {code})."
 
     def _notify(self, method, params=None):
         self._write({"jsonrpc": "2.0", "method": method, **({"params": params} if params else {})})
