@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shared Files</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📁</text></svg>">
+  <link rel="stylesheet" href="/organizer/organizer.css">
+</head>
+<body>
+  <main>
+    <header>
+      <a href="/" class="back">&larr; Chat</a>
+      <h1>Share files with the AI</h1>
+    </header>
+
+    <section class="card">
+      <h2>What sharing does</h2>
+      <ul class="facts">
+        <li>The AI can read the documents, slides, spreadsheets, PDFs and notes in a folder you share, so you can ask questions like "what did my history essay say about the New Deal?"</li>
+        <li>It also helps the organizer give clear names and folders to files like "Untitled 3.docx".</li>
+        <li><strong>Everything stays on this computer.</strong> Your files are only read by the AI model running here.</li>
+        <li><strong>Read-only.</strong> Answering questions never changes, moves or deletes a file.</li>
+        <li>Files that look private (passwords, keys) are never read. Stop sharing any time and the AI forgets that folder.</li>
+      </ul>
+    </section>
+
+    <form id="share-form" class="card">
+      <label for="folder">Folder to share</label>
+      <input id="folder" placeholder="~/Desktop" required>
+      <div class="shortcuts">
+        <button type="button" data-folder="~/Desktop">Desktop</button>
+        <button type="button" data-folder="~/Documents">Documents</button>
+        <button type="button" data-folder="~/Downloads">Downloads</button>
+      </div>
+      <div class="row">
+        <button type="submit" id="share" class="primary">Share this folder</button>
+        <span id="share-note" class="muted"></span>
+      </div>
+    </form>
+
+    <section class="card">
+      <h2>Shared folders</h2>
+      <ul id="folders"></ul>
+      <div class="row">
+        <button id="rescan">Check for new files</button>
+        <span id="rescan-note" class="muted"></span>
+      </div>
+    </section>
+
+    <form id="search-form" class="card">
+      <h2>Try it</h2>
+      <p class="muted">Type a question to see which files the AI would look at. Then ask it in the chat.</p>
+      <input id="query" placeholder="e.g. when is my science project due?">
+      <div class="row"><button type="submit">Search my files</button></div>
+      <ol id="results"></ol>
+    </form>
+  </main>
+  <script src="/organizer/files.js"></script>
+</body>
+</html>

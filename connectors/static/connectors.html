@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connectors</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔌</text></svg>">
+  <link rel="stylesheet" href="/connectors/connectors.css">
+  <script>
+    // Use the light/dark choice from the chat page's Settings.
+    try {
+      const theme = JSON.parse(localStorage.getItem("local-ai-settings"))?.theme;
+      if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
+</head>
+<body>
+  <main>
+    <header>
+      <a href="/" class="back">&larr; Chat</a>
+      <h1>Connectors</h1>
+    </header>
+
+    <p class="intro">
+      Connectors let the AI use other apps and tools, like your notes, files or GitHub.
+      They use the <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a>,
+      the open standard used by Claude, ChatGPT and other assistants, so thousands of existing connectors work here.
+      The AI asks before it uses a tool unless you choose <b>Always allow</b>.
+    </p>
+    <p class="intro muted">
+      Connectors need a model that can use tools, such as <code>qwen3:8b</code>
+      (install it with <code>ollama pull qwen3:8b</code>).
+    </p>
+
+    <section>
+      <h2>Your connectors</h2>
+      <div id="list"><p class="muted">Loading...</p></div>
+    </section>
+
+    <section>
+      <h2>Add a connector</h2>
+      <div id="presets" class="presets"></div>
+
+      <form id="add-form" class="card">
+        <div class="tabs" role="tablist">
+          <label><input type="radio" name="kind" value="local" checked> Program on this computer</label>
+          <label><input type="radio" name="kind" value="remote"> Web address (remote)</label>
+        </div>
+        <label for="name">Name</label>
+        <input id="name" placeholder="e.g. Files" required maxlength="40">
+        <div class="local-only">
+          <label for="command">Command</label>
+          <input id="command" placeholder="e.g. npx, uvx, python">
+          <label for="args">Arguments <span class="muted">(one per line)</span></label>
+          <textarea id="args" rows="3" placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;~/Documents"></textarea>
+          <label for="env">Environment variables <span class="muted">(optional, one KEY=value per line, e.g. API keys)</span></label>
+          <textarea id="env" rows="2"></textarea>
+        </div>
+        <div class="remote-only" hidden>
+          <label for="url">URL</label>
+          <input id="url" placeholder="https://example.com/mcp">
+          <label for="token">Access token <span class="muted">(optional)</span></label>
+          <input id="token" placeholder="Sent as: Authorization: Bearer ...">
+        </div>
+        <div class="row">
+          <button type="submit" class="primary" id="add-btn">Add and connect</button>
+          <span id="add-note" class="muted"></span>
+        </div>
+      </form>
+
+      <details class="card">
+        <summary>Paste a setup from Claude Desktop, Cursor or VS Code</summary>
+        <p class="muted">Many connectors' instructions give a block that starts with <code>{"mcpServers": ...}</code>. Paste it here as is.</p>
+        <textarea id="import-text" rows="7" placeholder='{"mcpServers": {"memory": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"]}}}'></textarea>
+        <div class="row">
+          <button id="import-btn">Add these</button>
+          <span id="import-note" class="muted"></span>
+        </div>
+      </details>
+    </section>
+  </main>
+  <script src="/connectors/connectors.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+/* Tool cards in the chat. Uses the chat page's own colors (style.css). */
+.tool-card {
+  border: 1px solid var(--border);
+  background: var(--card, var(--panel));
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  font-size: 14px;
+  max-width: 100%;
+}
+.tool-head { display: flex; align-items: center; gap: 8px; }
+.tool-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.tool-state { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.tool-card[data-state="pending"] { border-color: var(--accent); }
+.tool-card[data-state="pending"] .tool-state { color: var(--accent); }
+.tool-card[data-state="failed"] .tool-state,
+.tool-card[data-state="declined"] .tool-state { color: var(--muted); }
+.tool-args { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 8px 0 0; }
+.tool-args dt { color: var(--muted); }
+.tool-args dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.tool-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.tool-card details { margin-top: 6px; }
+.tool-card summary { cursor: pointer; color: var(--muted); }
+.tool-card pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 8px;
+  margin: 6px 0 0;
+}
+.tool-link { display: inline-block; margin-top: 6px; color: var(--accent); }
+.tool-notice { font-size: 13px; color: var(--muted); border-left: 3px solid var(--accent); padding-left: 10px; margin: 4px 0 8px; }

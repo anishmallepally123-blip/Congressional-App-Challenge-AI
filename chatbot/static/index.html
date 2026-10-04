@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local AI Chat</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/connectors/tool-chat.css">
+</head>
+<body>
+  <aside id="sidebar" aria-label="Chats">
+    <div class="brand">💬 Local AI Chat</div>
+    <button id="new-chat" class="primary" title="Start a new chat (Ctrl+Shift+O)">＋ New chat</button>
+    <input id="search" type="search" placeholder="Search chats" aria-label="Search chats">
+    <ul id="chat-list"></ul>
+    <a href="/organizer" id="organizer-link" class="sidebar-link" hidden>🗂️ Organize a folder</a>
+    <a href="/connectors" class="sidebar-link">🔌 Connectors</a> <!-- connectors_routes -->
+    <a href="/files" id="files-link" class="sidebar-link" hidden>📁 Shared files</a>
+    <div class="sidebar-footer">
+      <button id="model-button" class="model-button" title="Choose an AI model">
+        <span class="dot" id="model-dot"></span>
+        <span class="model-text">
+          <span class="small">AI model</span>
+          <span id="model-name">Choose a model</span>
+        </span>
+        <span aria-hidden="true">›</span>
+      </button>
+      <button id="settings-button" class="sidebar-link plain">⚙️ Settings</button>
+    </div>
+  </aside>
+  <div id="scrim" hidden></div>
+
+  <main>
+    <header>
+      <button id="toggle-sidebar" class="icon" aria-label="Show chats">☰</button>
+      <h1 id="chat-title">New chat</h1>
+    </header>
+
+    <section id="messages" aria-live="polite"></section>
+
+    <div id="composer-wrap">
+      <form id="composer">
+        <textarea id="input" rows="1" placeholder="Ask anything..." aria-label="Message"></textarea>
+        <div class="composer-row">
+          <button type="button" id="think-toggle" class="chip" aria-pressed="false" hidden
+            title="The AI thinks step by step before answering. Smarter, but slower.">💡 Think deeper</button>
+          <span class="hint">Enter to send · Shift+Enter for a new line</span>
+          <button type="submit" id="send" class="primary round" aria-label="Send">↑</button>
+          <button type="button" id="stop" class="round" aria-label="Stop" hidden>■</button>
+        </div>
+      </form>
+      <p class="disclaimer">Runs on your computer. AI can make mistakes, so check important facts.</p>
+    </div>
+  </main>
+
+  <!-- Choose a model -->
+  <dialog id="models-dialog" aria-labelledby="models-title">
+    <div class="dialog-head">
+      <h2 id="models-title">Choose an AI model</h2>
+      <button class="icon close" data-close aria-label="Close">✕</button>
+    </div>
+    <div id="system-card" class="system-card"></div>
+    <p class="note">Bigger models give smarter answers but need a stronger computer. Models that are too big for this computer are locked so it doesn't freeze.</p>
+    <div id="model-cards"></div>
+  </dialog>
+
+  <!-- Settings -->
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <div class="dialog-head">
+      <h2 id="settings-title">Settings</h2>
+      <button class="icon close" data-close aria-label="Close">✕</button>
+    </div>
+    <div class="setting">
+      <span>Text size</span>
+      <div class="segmented" data-setting="textSize">
+        <button data-value="normal">A</button>
+        <button data-value="large" class="bigger">A</button>
+        <button data-value="xlarge" class="biggest">A</button>
+      </div>
+    </div>
+    <div class="setting">
+      <span>Appearance</span>
+      <div class="segmented" data-setting="theme">
+        <button data-value="auto">Auto</button>
+        <button data-value="light">Light</button>
+        <button data-value="dark">Dark</button>
+      </div>
+    </div>
+    <div class="setting phone-setting">
+      <span>Use on your phone</span>
+      <div class="segmented">
+        <button data-phone="true">On</button>
+        <button data-phone="false">Off</button>
+      </div>
+    </div>
+    <div id="phone-info" class="phone-setting"></div>
+    <div class="setting">
+      <span>Switch to a coding model for coding projects</span>
+      <div class="segmented" data-setting="autoCode">
+        <button data-value="on">Auto</button>
+        <button data-value="off">Off</button>
+      </div>
+    </div>
+    <div class="setting">
+      <span>AI model settings</span>
+      <button id="adjust-current">Adjust current model</button>
+    </div>
+    <div class="setting">
+      <span>Your chats</span>
+      <button id="clear-all" class="danger">Delete all chats</button>
+    </div>
+    <p class="note">Chats are saved only in this browser on this computer.</p>
+  </dialog>
+
+  <!-- Settings for one model (filled in by app.js) -->
+  <dialog id="model-settings-dialog" aria-labelledby="model-settings-title">
+    <div class="dialog-head">
+      <h2 id="model-settings-title">Model settings</h2>
+      <button class="icon close" data-close aria-label="Close">✕</button>
+    </div>
+    <div id="model-settings-body"></div>
+  </dialog>
+
+  <div id="toast" role="status" hidden></div>
+
+  <script src="markdown.js"></script>
+  <script src="/connectors/tool-chat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

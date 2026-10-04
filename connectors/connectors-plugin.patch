@@ -1,0 +1,135 @@
+diff -ru chatbot/server.py
+--- chatbot/server.py	2026-10-04 08:10:48.100880071 +0000
++++ chatbot/server.py	2026-10-04 08:10:48.504827775 +0000
+@@ -34,6 +34,13 @@
+ except ImportError:
+     organizer_routes = shared_files = None
+ 
++# Connectors (third-party tools using the Model Context Protocol) live next to this folder too.
++sys.path.insert(0, os.path.join(HERE, "..", "connectors"))
++try:
++    import connectors_routes
++except ImportError:
++    connectors_routes = None
++
+ OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+ PORT = int(os.environ.get("PORT", "8000"))
+ STATIC_DIR = os.path.join(HERE, "static")
+@@ -130,6 +137,8 @@
+     def do_GET(self):
+         if organizer_routes and organizer_routes.handle(self):
+             return
++        if connectors_routes and connectors_routes.handle(self):
++            return
+         routes = {"/api/status": self.status, "/api/system": self.system, "/api/models": self.list_models}
+         if self.path in routes:
+             return routes[self.path]()
+@@ -138,6 +147,8 @@
+     def do_POST(self):
+         if organizer_routes and organizer_routes.handle(self):
+             return
++        if connectors_routes and connectors_routes.handle(self):
++            return
+         routes = {"/api/chat": self.chat, "/api/pull": self.pull, "/api/delete": self.delete}
+         if self.path not in routes:
+             return self.send_json(404, {"error": "Not found"})
+@@ -293,6 +304,9 @@
+         }
+         if "thinking" in capabilities(model):
+             payload["think"] = bool(request.get("think"))
++        # Let the model use connectors' tools; notices say if this model can't.
++        notices = connectors_routes.add_tools(payload, messages, capabilities(model)) if connectors_routes else []
++        tool_calls = []
+ 
+         try:
+             resp = ollama("/api/chat", payload, timeout=600)
+@@ -325,7 +339,13 @@
+                         self.emit({"type": "thinking", "text": message["thinking"]})
+                     if message.get("content"):
+                         self.emit({"type": "text", "text": message["content"]})
++                    tool_calls += message.get("tool_calls") or []
+                     if chunk.get("done"):
++                        for event in notices:
++                            self.emit(event)
++                        if tool_calls:
++                            # The page asks the user, runs the tools, then sends the chat back here.
++                            self.emit(connectors_routes.tool_calls_event(tool_calls))
+                         if sources:
+                             self.emit({"type": "text", "text": "\n\n*Looked in: " + ", ".join(sources) + "*"})
+                         if chunk.get("done_reason") == "length":
+diff -ru chatbot/static/app.js
+--- chatbot/static/app.js	2026-10-04 08:10:48.101031979 +0000
++++ chatbot/static/app.js	2026-10-04 08:10:48.504974273 +0000
+@@ -563,7 +563,10 @@
+ function renderMessages() {
+   const chat = currentChat();
+   messagesEl.innerHTML = "";
+-  chat.messages.forEach((m, i) => messagesEl.append(messageEl(m, i, chat)));
++  chat.messages.forEach((m, i) => {
++    if (m.role === "tool") return; // a tool's answer; shown on its card instead (connectors_routes)
++    messagesEl.append(m.tool_calls ? ToolChat.savedTurn(m, renderMarkdown) : messageEl(m, i, chat));
++  });
+   scrollToBottom();
+ }
+ 
+@@ -672,6 +675,7 @@
+   let thinkSeconds = null;
+   let failure = null;
+   let notice = null;
++  let toolCalls = null; // tools the model asked for (connectors_routes)
+   controller = new AbortController();
+ 
+   const nearBottom = () => messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 80;
+@@ -714,12 +718,25 @@
+           body.innerHTML = renderMarkdown(reply);
+         } else if (ev.type === "notice") {
+           notice = ev;
++        } else if (ev.type === "tool_calls") {
++          toolCalls = ev.calls;
+         } else if (ev.type === "error") {
+           failure = { message: ev.message };
+         }
+         if (stick) scrollToBottom();
+       });
+     }
++    // The model wants to use connectors: ask the user, run the tools, then let it continue.
++    if (toolCalls && !failure) {
++      body.innerHTML = renderMarkdown(reply);
++      const signal = controller.signal;
++      const ran = await ToolChat.runCalls({ calls: toolCalls, chat, model, text: reply, wrap, body, signal, save: saveChats });
++      if (ran) {
++        controller = null;
++        renderMain();
++        return streamReply(chat);
++      }
++    }
+   } catch (err) {
+     if (err.name !== "AbortError") failure = { message: "Lost connection to the app. Is the server window still open?" };
+   }
+diff -ru chatbot/static/index.html
+--- chatbot/static/index.html	2026-10-04 08:10:48.101145146 +0000
++++ chatbot/static/index.html	2026-10-04 08:10:48.505013620 +0000
+@@ -6,6 +6,7 @@
+   <title>Local AI Chat</title>
+   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
+   <link rel="stylesheet" href="style.css">
++  <link rel="stylesheet" href="/connectors/tool-chat.css">
+ </head>
+ <body>
+   <aside id="sidebar" aria-label="Chats">
+@@ -14,6 +15,7 @@
+     <input id="search" type="search" placeholder="Search chats" aria-label="Search chats">
+     <ul id="chat-list"></ul>
+     <a href="/organizer" id="organizer-link" class="sidebar-link" hidden>🗂️ Organize a folder</a>
++    <a href="/connectors" class="sidebar-link">🔌 Connectors</a> <!-- connectors_routes -->
+     <a href="/files" id="files-link" class="sidebar-link" hidden>📁 Shared files</a>
+     <div class="sidebar-footer">
+       <button id="model-button" class="model-button" title="Choose an AI model">
+@@ -115,6 +117,7 @@
+   <div id="toast" role="status" hidden></div>
+ 
+   <script src="markdown.js"></script>
++  <script src="/connectors/tool-chat.js"></script>
+   <script src="app.js"></script>
+ </body>
+ </html>

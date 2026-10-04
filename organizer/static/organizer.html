@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Organize a Folder</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗂️</text></svg>">
+  <link rel="stylesheet" href="/organizer/organizer.css">
+</head>
+<body>
+  <main>
+    <header>
+      <a href="/" class="back">&larr; Chat</a>
+      <h1>Organize a folder</h1>
+    </header>
+
+    <form id="plan-form" class="card">
+      <label for="folder">Folder</label>
+      <input id="folder" placeholder="~/Desktop" required>
+      <div class="shortcuts">
+        <button type="button" data-folder="~/Desktop">Desktop</button>
+        <button type="button" data-folder="~/Downloads">Downloads</button>
+        <button type="button" data-folder="~/Documents">Documents</button>
+      </div>
+      <label for="request">How should it be organized? <span class="muted">(optional)</span></label>
+      <input id="request" placeholder="e.g. group school work by class, put screenshots together">
+      <label for="model">Model</label>
+      <select id="model"><option value="">No AI: sort by file type</option></select>
+      <div class="row">
+        <button type="submit" id="make-plan" class="primary">Make a plan</button>
+        <span id="form-note" class="muted"></span>
+      </div>
+    </form>
+
+    <section id="plan" class="card" hidden>
+      <h2>Proposed changes</h2>
+      <p id="plan-summary"></p>
+      <p id="plan-note" class="muted"></p>
+      <p class="muted">Nothing has changed yet. Untick anything you want left alone, then press Apply.</p>
+      <div class="row">
+        <label class="inline"><input type="checkbox" id="check-all" checked> Select all</label>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th></th><th>File</th><th>Moves to</th><th>Why</th></tr></thead>
+          <tbody id="moves"></tbody>
+        </table>
+      </div>
+      <details id="skipped-wrap" hidden>
+        <summary>Suggestions that were ignored for safety</summary>
+        <ul id="skipped"></ul>
+      </details>
+      <div class="row">
+        <button id="apply" class="primary">Apply</button>
+        <button id="cancel">Cancel</button>
+        <span id="apply-note" class="muted"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Recent changes</h2>
+      <p class="muted">Every change is logged, so you can put files back where they were.</p>
+      <ul id="runs"></ul>
+    </section>
+  </main>
+  <script src="/organizer/organizer.js"></script>
+</body>
+</html>
