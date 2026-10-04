@@ -13,6 +13,7 @@ Run it with:  python server.py   (then open http://localhost:8000)
 
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -51,6 +52,12 @@ SYSTEM_PROMPT = (
     "Answer clearly and accurately. Use Markdown for formatting: headings, lists, "
     "tables and fenced code blocks with a language tag. If you are not sure about "
     "something, say so instead of guessing."
+)
+
+TITLE_PROMPT = (
+    "Write a short title (3 to 6 words) that sums up what this chat is about. "
+    "Do not copy the user's message word for word. Reply with only the title: "
+    "no quotes, no ending punctuation, no extra words."
 )
 
 _capabilities = {}  # model name -> list like ["completion", "tools", "thinking"]
@@ -147,7 +154,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
         if not phone.is_paired(self.headers.get("Cookie")):
             self.send_json(401, {"error": "Enter the code shown on your computer first.", "pair": True})
             return False
-        if (method, path) in (("GET", "/api/models"), ("GET", "/api/system"), ("POST", "/api/chat")):
+        if (method, path) in (("GET", "/api/models"), ("GET", "/api/system"), ("POST", "/api/chat"), ("POST", "/api/title")):
             return True
         self.send_json(403, {"error": "This can only be done on the computer running the app."})
         return False
@@ -183,7 +190,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
             return
         if connectors_routes and connectors_routes.handle(self):
             return
-        routes = {"/api/chat": self.chat, "/api/pull": self.pull, "/api/delete": self.delete,
+        routes = {"/api/chat": self.chat, "/api/title": self.title, "/api/pull": self.pull, "/api/delete": self.delete,
                   "/api/phone": self.phone_toggle, "/api/pair": self.pair}
         if self.path not in routes:
             return self.send_json(404, {"error": "Not found"})
@@ -419,6 +426,42 @@ class ChatHandler(SimpleHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             # The user pressed Stop or closed the tab.
             pass
+
+    def title(self, request):
+        """Ask the model for a short name for a new chat, based on its first question and answer."""
+        model = request.get("model")
+        question = str(request.get("question") or "")[:1500]
+        answer = str(request.get("answer") or "")[:600]
+        if not model or not question.strip():
+            return self.send_json(400, {"error": "Bad request"})
+        try:
+            if model not in installed_models():
+                return self.send_json(404, {"error": "That model isn't installed."})
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": TITLE_PROMPT},
+                    {"role": "user", "content": f"User's message:\n{question}\n\nStart of the answer:\n{answer}\n\nTitle:"},
+                ],
+                "options": {"temperature": 0.3, "num_predict": 24},
+                "stream": False,
+            }
+            if "thinking" in capabilities(model):
+                payload["think"] = False  # a title doesn't need the model to think it over first
+            text = ollama_json("/api/chat", payload, timeout=30).get("message", {}).get("content", "")
+        except (urllib.error.URLError, OSError, ValueError):
+            return self.send_json(503, {"error": "Couldn't reach Ollama."})
+        self.send_json(200, {"title": clean_title(text)})
+
+
+def clean_title(text):
+    """Tidy what the model wrote into a plain title, or "" if nothing usable came back."""
+    text = re.sub(r"<think>.*?(</think>|$)", "", text, flags=re.S)
+    line = next((l for l in text.splitlines() if l.strip()), "")
+    line = re.sub(r"^\s*(title\s*:)?\s*", "", line, flags=re.I)
+    line = line.strip().strip("*#_`\"'“”‘’ ").rstrip(".!?:;,")
+    words = line.split()
+    return " ".join(words[:8])[:60] if words else ""
 
 
 def main():
