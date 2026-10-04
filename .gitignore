@@ -19,3 +19,6 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# Files the Start scripts download on first run
+runtime/

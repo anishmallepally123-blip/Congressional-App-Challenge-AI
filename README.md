@@ -20,13 +20,15 @@ Everything is written with only Python's standard library and plain JavaScript, 
 
 ## Quick start
 
-1. Install **Python 3** from [python.org/downloads](https://www.python.org/downloads/) (on Windows, tick "Add python.exe to PATH").
-2. Install **Ollama** from [ollama.com/download](https://ollama.com/download) and open it once.
-3. Start the app:
-   - **Windows:** double-click `chatbot/start-windows.bat`
-   - **Mac:** double-click `chatbot/start-mac.command` (the first time, right-click it and choose **Open**)
-   - **Any terminal:** `python3 chatbot/server.py`
-4. Your browser opens **http://localhost:8000**. The setup guide downloads a model that fits your computer.
+1. Download **LocalAIChat.zip** from the [latest release](https://github.com/anishmallepally123-blip/Congressional-App-Challenge-AI/releases/latest) and unzip it.
+2. Double-click the Start file in the new folder:
+   - **Windows:** `Start Local AI Chat - Windows`
+   - **Mac:** `Start Local AI Chat - Mac`
+3. The first time, it downloads Python and [Ollama](https://ollama.com) by itself (no admin password, nothing else to install). Your browser then opens **http://localhost:8000**, where one click downloads an AI model that fits your computer.
+
+Step-by-step instructions, including what to click on the Windows and Mac security prompts, are in [QUICK START.txt](QUICK%20START.txt). The project website is at **https://anishmallepally123-blip.github.io/Congressional-App-Challenge-AI/**.
+
+**Developers:** with Python 3.9+ and Ollama already installed, run `python3 chatbot/server.py`.
 
 ## Project layout
 
@@ -35,6 +37,7 @@ Everything is written with only Python's standard library and plain JavaScript, 
 | [`chatbot/`](chatbot/README.md) | The main app: web server, chat page, hardware detection, model catalog, coding router and phone pairing |
 | [`organizer/`](organizer/README.md) | Folder Organizer and Shared Files, loaded by the chatbot when this folder sits next to it |
 | [`connectors/`](connectors/README.md) | MCP connectors so the AI can use third-party tools, with an example Notes server |
+| `launcher/` | The Windows setup script used by the Start files (downloads Python and Ollama into `runtime/` on first run) |
 | `docs/` | The public website (GitHub Pages): landing page, walkthrough video, download link and an in-browser demo chat |
 
 Each folder has its own README with details.
