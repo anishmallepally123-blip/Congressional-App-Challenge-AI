@@ -1,9 +1,15 @@
-# Builds LocalAIChat.zip and publishes it as a GitHub Release when a version tag (v1.0.0, ...) is pushed.
+# Builds LocalAIChat.zip and publishes it as a GitHub Release, either when a version tag
+# (v1.0.0, ...) is pushed or when started by hand from the Actions tab with a version.
 name: Release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to create, like v1.0.1"
+        required: true
 
 permissions:
   contents: write
@@ -27,7 +33,9 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version || github.ref_name }}
         run: |
-          gh release create "$GITHUB_REF_NAME" LocalAIChat.zip \
-            --title "Local AI Chat $GITHUB_REF_NAME" \
-            --notes "Download **LocalAIChat.zip**, unzip it, and double-click the Start file for Windows or Mac. The first run downloads Python and Ollama by itself. Full steps: [QUICK START.txt](https://github.com/${{ github.repository }}/blob/$GITHUB_REF_NAME/QUICK%20START.txt)."
+          gh release create "$VERSION" LocalAIChat.zip \
+            --target "$GITHUB_SHA" \
+            --title "Local AI Chat $VERSION" \
+            --notes "Download **LocalAIChat.zip**, unzip it, and double-click the Start file for Windows or Mac. The first run downloads Python and Ollama by itself. Full steps: [QUICK START.txt](https://github.com/${{ github.repository }}/blob/$VERSION/QUICK%20START.txt)."
