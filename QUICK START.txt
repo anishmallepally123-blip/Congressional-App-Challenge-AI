@@ -25,6 +25,10 @@ WHAT YOU NEED
    A window opens and, the first time only, downloads Python and the AI engine
    (Ollama). This can take several minutes. Keep that window open.
 
+   On Windows, an Ollama window saying "Run Ollama" may pop up during setup.
+   You don't need to do anything in it. Ignore it or minimize it; the app
+   opens in your browser by itself.
+
 3. PICK A MODEL (first time only)
    Your browser opens http://localhost:8000. The setup page shows the model that
    fits your computer. Click Download and wait for the bar to finish.
@@ -41,4 +45,6 @@ TO RESTART: double-click the Start file again (it starts in seconds after the fi
 TROUBLESHOOTING
   - The page says Ollama isn't running: close the Start window and start it again.
   - The browser didn't open: go to http://localhost:8000 yourself.
+  - The Start window seems stuck: close it and double-click the Start file again.
+    It skips anything already downloaded.
   - Replies are slow: in the model picker choose a model marked "Fast on this computer".

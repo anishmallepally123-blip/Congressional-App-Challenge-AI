@@ -114,12 +114,24 @@ Say "Python is ready."
 Step "Checking for the AI engine (Ollama)"
 
 function Find-Ollama {
-    foreach ($p in @("$env:LOCALAPPDATA\Programs\Ollama\ollama app.exe", "$env:ProgramFiles\Ollama\ollama app.exe")) {
-        if (Test-Path $p) { return $p }
+    # Prefer the plain engine (ollama.exe): it runs hidden, while "ollama app.exe" opens a window.
+    foreach ($dir in @("$env:LOCALAPPDATA\Programs\Ollama", "$env:ProgramFiles\Ollama")) {
+        foreach ($name in @("ollama.exe", "ollama app.exe")) {
+            $p = Join-Path $dir $name
+            if (Test-Path $p) { return $p }
+        }
     }
     $cmd = Get-Command ollama -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
     return $null
+}
+
+function Wait-Ollama($seconds) {
+    for ($i = 0; $i -lt $seconds; $i++) {
+        if (Responds "$OllamaUrl/api/version") { return $true }
+        Start-Sleep -Seconds 1
+    }
+    return $false
 }
 
 function Start-Ollama($exe) {
@@ -128,11 +140,7 @@ function Start-Ollama($exe) {
     } else {
         Start-Process -FilePath $exe -ArgumentList "serve" -WindowStyle Hidden
     }
-    for ($i = 0; $i -lt 60; $i++) {
-        if (Responds "$OllamaUrl/api/version") { return $true }
-        Start-Sleep -Seconds 1
-    }
-    return $false
+    return (Wait-Ollama 60)
 }
 
 if (-not (Responds "$OllamaUrl/api/version")) {
@@ -142,14 +150,24 @@ if (-not (Responds "$OllamaUrl/api/version")) {
         New-Item -ItemType Directory -Force -Path $Runtime | Out-Null
         $setup = Join-Path $Runtime "OllamaSetup.exe"
         try { Download "https://ollama.com/download/OllamaSetup.exe" $setup } catch { Fail "Ollama could not be downloaded." }
-        Say "Installing Ollama..."
-        Start-Process -FilePath $setup -ArgumentList "/VERYSILENT", "/NORESTART", "/SUPPRESSMSGBOXES" -Wait
+        Say "Installing Ollama... (if an Ollama window pops up, you can ignore it)"
+        # Wait for the installer itself only. Start-Process -Wait would also wait for the Ollama
+        # app the installer opens at the end, which never exits, so the launcher would hang here.
+        $installer = Start-Process -FilePath $setup -ArgumentList "/VERYSILENT", "/NORESTART", "/SUPPRESSMSGBOXES" -PassThru
+        for ($i = 0; $i -lt 900 -and -not $installer.HasExited; $i++) {
+            if ($i -gt 10 -and (Responds "$OllamaUrl/api/version")) { break }
+            Start-Sleep -Seconds 1
+        }
         Remove-Item $setup -Force -ErrorAction SilentlyContinue
         $Ollama = Find-Ollama
         if (-not $Ollama) { Fail "Ollama did not install." }
+        # The installer usually starts Ollama by itself; give it a moment before starting another copy.
+        Wait-Ollama 20 | Out-Null
     }
-    Say "Starting Ollama..."
-    if (-not (Start-Ollama $Ollama)) { Fail "Ollama did not start." }
+    if (-not (Responds "$OllamaUrl/api/version")) {
+        Say "Starting Ollama..."
+        if (-not (Start-Ollama $Ollama)) { Fail "Ollama did not start." }
+    }
 }
 Say "Ollama is running."
 
