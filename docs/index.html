@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local AI Chat</title>
+  <meta name="description" content="A private AI assistant that runs entirely on your own computer and is used through a web page. A Congressional App Challenge entry.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="#">💬 Local AI Chat</a>
+      <nav>
+        <a href="#video" class="hide-sm">Video</a>
+        <a href="#get-started">Get started</a>
+        <a href="#features" class="hide-sm">Features</a>
+        <a href="demo.html">Try it</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero wrap">
+      <h1>Your own AI assistant,<br>running on your own computer.</h1>
+      <p class="lead">Local AI Chat runs an AI model right on your desktop or laptop and lets you use it from a simple web page. No account, no subscription, and your chats never leave your computer.</p>
+      <div class="actions">
+        <a class="btn primary" id="download" href="https://github.com/anishmallepally123-blip/congressional-app-challenge-ai/releases/latest">⬇ Download the app</a>
+        <a class="btn" href="demo.html">Try it in your browser</a>
+      </div>
+      <p class="note">Free for Windows and Mac. Built for the Congressional App Challenge.</p>
+      <img class="hero-shot" src="screenshots/chat.png" alt="The Local AI Chat page with a conversation">
+    </div>
+
+    <section id="video" class="alt">
+      <div class="wrap">
+        <h2>Watch the walkthrough</h2>
+        <p class="sub">A short video showing how to set up the app and what it can do.</p>
+        <!-- To show the video, put its YouTube ID in data-youtube, e.g. data-youtube="dQw4w9WgXcQ" -->
+        <div class="video" id="video-box" data-youtube="">
+          <div>🎬<br>The instruction video is coming soon.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="get-started">
+      <div class="wrap">
+        <h2>Get started in four steps</h2>
+        <p class="sub">About ten minutes the first time, most of it waiting for the AI model to download.</p>
+        <ol class="steps">
+          <li>
+            <h3>Install Ollama</h3>
+            <p>Ollama is the free engine that runs AI models on your computer. Get it from <a href="https://ollama.com/download" target="_blank" rel="noopener">ollama.com/download</a>, install it, and open it once.</p>
+          </li>
+          <li>
+            <h3>Download Local AI Chat</h3>
+            <p>Click <a href="https://github.com/anishmallepally123-blip/congressional-app-challenge-ai/releases/latest">Download the app</a> and unzip the file anywhere, like your Desktop.</p>
+          </li>
+          <li>
+            <h3>Double-click to start</h3>
+            <p>On Windows, double-click <code>start-windows.bat</code>. On a Mac, double-click <code>start-mac.command</code> (the first time, right-click it and choose <strong>Open</strong>). The app needs <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">Python 3</a>; on Windows, tick “Add python.exe to PATH” when installing it.</p>
+          </li>
+          <li>
+            <h3>Pick a model and chat</h3>
+            <p>Your browser opens the app at <code>http://localhost:8000</code>. It checks your computer’s memory and graphics card and recommends a model that fits. Click Download, then start chatting.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="features" class="alt">
+      <div class="wrap">
+        <h2>What it can do</h2>
+        <p class="sub">Everything runs on your computer. Nothing is sent to the cloud.</p>
+        <div class="grid">
+          <div class="card">
+            <img src="screenshots/chat.png" alt="Chat page" loading="lazy">
+            <div class="body"><h3>Chat privately</h3><p>Streaming answers, a “Think deeper” mode, chat history with search, formatted answers and code, and light and dark themes.</p></div>
+          </div>
+          <div class="card">
+            <img src="screenshots/model-picker.png" alt="Model picker" loading="lazy">
+            <div class="body"><h3>Picks a model that fits</h3><p>Detects your memory and graphics card, recommends the best model, and locks ones too big for your computer.</p></div>
+          </div>
+          <div class="card">
+            <img src="screenshots/coding-models.png" alt="Coding models" loading="lazy">
+            <div class="body"><h3>Coding help</h3><p>Bigger coding requests switch automatically to a coding model that fits your computer.</p></div>
+          </div>
+          <div class="card">
+            <img src="screenshots/organizer.png" alt="Folder organizer" loading="lazy">
+            <div class="body"><h3>Folder organizer</h3><p>The AI suggests how to tidy a messy folder. Nothing changes until you press Apply, and every change can be undone.</p></div>
+          </div>
+          <div class="card">
+            <img src="screenshots/connectors.png" alt="Connectors" loading="lazy">
+            <div class="body"><h3>Connectors</h3><p>Plug in other tools through the Model Context Protocol, with an approval card before any tool runs.</p></div>
+          </div>
+          <div class="card">
+            <img src="screenshots/phone-chat.png" alt="Chat on a phone" loading="lazy">
+            <div class="body"><h3>Use it on your phone</h3><p>Chat from your phone over your home Wi-Fi after entering a pairing code, with the model still running on your computer.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="how">
+      <div class="wrap">
+        <h2>How it works</h2>
+        <p class="sub">The web page talks to a small server on your computer, which talks to the AI model through Ollama.</p>
+        <div class="diagram">Your browser  ⇄  Local AI Chat server (port 8000)  ⇄  Ollama (port 11434)  ⇄  AI model
+          └──────────────────────── all on your computer ────────────────────────┘</div>
+      </div>
+    </section>
+
+    <section class="alt faq">
+      <div class="wrap">
+        <h2>Questions</h2>
+        <details>
+          <summary>Does it need the internet?</summary>
+          <p>Only to download Ollama and an AI model the first time. After that it works completely offline.</p>
+        </details>
+        <details>
+          <summary>What kind of computer do I need?</summary>
+          <p>Any recent Windows or Mac computer. Models range from tiny ones that run on 8 GB laptops to large ones for powerful desktops, and the app picks one that fits.</p>
+        </details>
+        <details>
+          <summary>What’s the difference between the download and “Try it in your browser”?</summary>
+          <p>The browser demo runs a very small model inside your web browser so you can try chatting with nothing installed. The downloaded app runs bigger, smarter models with all the features: the organizer, shared files, connectors and phone access.</p>
+        </details>
+        <details>
+          <summary>Where are my chats stored?</summary>
+          <p>In your own browser and on your own computer. Nothing is uploaded anywhere.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">Local AI Chat · A Congressional App Challenge entry · <a href="https://github.com/anishmallepally123-blip/congressional-app-challenge-ai">Source code</a></div>
+  </footer>
+
+  <script>
+    // Swap the video placeholder for the YouTube player once an ID is filled in.
+    const box = document.getElementById("video-box");
+    const id = box.dataset.youtube.trim();
+    if (id) {
+      box.innerHTML = "";
+      const frame = document.createElement("iframe");
+      frame.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id);
+      frame.title = "Local AI Chat walkthrough";
+      frame.allow = "accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen";
+      frame.allowFullscreen = true;
+      box.appendChild(frame);
+    }
+  </script>
+</body>
+</html>

@@ -35,6 +35,7 @@ Everything is written with only Python's standard library and plain JavaScript, 
 | [`chatbot/`](chatbot/README.md) | The main app: web server, chat page, hardware detection, model catalog, coding router and phone pairing |
 | [`organizer/`](organizer/README.md) | Folder Organizer and Shared Files, loaded by the chatbot when this folder sits next to it |
 | [`connectors/`](connectors/README.md) | MCP connectors so the AI can use third-party tools, with an example Notes server |
+| `docs/` | The public website (GitHub Pages): landing page, walkthrough video, download link and an in-browser demo chat |
 
 Each folder has its own README with details.
 

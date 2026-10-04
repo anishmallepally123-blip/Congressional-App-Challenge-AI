@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local AI Chat Demo</title>
+  <meta name="description" content="Try Local AI Chat in your browser. A small AI model runs entirely on your device.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="demo">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="index.html">💬 Local AI Chat</a>
+      <nav>
+        <a href="index.html#get-started">Get the full app</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="demo-main">
+    <div class="banner">
+      <strong>Browser demo.</strong> A tiny AI model runs right here in your browser, so nothing you type leaves your device.
+      The <a href="index.html#get-started">full app</a> runs much smarter models and adds the organizer, shared files, connectors and phone access.
+    </div>
+
+    <section id="messages" aria-live="polite">
+      <div class="welcome" id="welcome">
+        <h1>Try Local AI Chat</h1>
+        <p id="welcome-text">Press Start to download a small AI model (about 400 MB, saved by your browser so it only downloads once). It then runs entirely on your device.</p>
+        <button class="btn primary" id="start">Start the demo</button>
+        <div class="progress" id="progress" hidden>
+          <div class="bar"><span id="bar"></span></div>
+          <small id="progress-text">Getting ready…</small>
+        </div>
+        <div class="suggestions" id="suggestions" hidden>
+          <button>Explain how a bill becomes a law</button>
+          <button>Write a short poem about autumn</button>
+          <button>Give me 3 tips for studying for a test</button>
+          <button>What is a large language model?</button>
+        </div>
+      </div>
+    </section>
+
+    <form class="composer" id="composer">
+      <textarea id="input" rows="1" placeholder="Press Start above to load the model" disabled aria-label="Message"></textarea>
+      <div class="row">
+        <label title="The model reasons step by step before answering. Slower but sometimes better."><input type="checkbox" id="think"> Think deeper</label>
+        <button type="button" class="btn" id="stop" hidden>Stop</button>
+        <button type="submit" class="btn primary" id="send" disabled>Send</button>
+      </div>
+    </form>
+    <p class="fine">Small models make mistakes. Check important answers.</p>
+  </div>
+
+  <script src="markdown.js"></script>
+  <script type="module" src="demo.js"></script>
+</body>
+</html>
