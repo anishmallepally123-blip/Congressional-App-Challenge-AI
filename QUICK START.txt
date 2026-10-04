@@ -1,0 +1,44 @@
+LOCAL AI CHAT - QUICK START
+A private AI assistant that runs on your own computer. No account, no subscription,
+and your chats never leave your computer.
+
+WHAT YOU NEED
+  - A Windows 10/11 PC or a Mac (Apple Silicon or Intel) with 8 GB of memory or more
+  - An internet connection the first time only (about 2 to 4 GB of downloads)
+  - Nothing else. The Start file downloads everything the app needs.
+
+1. UNZIP
+   Windows: right-click LocalAIChat.zip, choose "Extract All...", then Extract.
+            (Don't run it from inside the zip.)
+   Mac:     double-click LocalAIChat.zip. A "Local AI Chat" folder appears.
+
+2. START
+   Windows: open the folder and double-click "Start Local AI Chat - Windows".
+            If a blue "Windows protected your PC" box appears, click
+            "More info", then "Run anyway". If a security box asks, click "Run".
+   Mac:     open the folder and double-click "Start Local AI Chat - Mac".
+            If the Mac says it can't verify the developer, click Done, open
+            System Settings > Privacy & Security, scroll down, click
+            "Open Anyway" next to the Start file, and confirm.
+            (On macOS 14 or older you can instead right-click the file and choose Open.)
+
+   A window opens and, the first time only, downloads Python and the AI engine
+   (Ollama). This can take several minutes. Keep that window open.
+
+3. PICK A MODEL (first time only)
+   Your browser opens http://localhost:8000. The setup page shows the model that
+   fits your computer. Click Download and wait for the bar to finish.
+
+4. CHAT
+   Type a question and press Enter. Try:
+     - "Explain photosynthesis like I'm 10"
+     - "Write a Python function that checks if a word is a palindrome"
+   In the sidebar, also try Folder Organizer and Shared Files.
+
+TO STOP:   close the Start window.
+TO RESTART: double-click the Start file again (it starts in seconds after the first time).
+
+TROUBLESHOOTING
+  - The page says Ollama isn't running: close the Start window and start it again.
+  - The browser didn't open: go to http://localhost:8000 yourself.
+  - Replies are slow: in the model picker choose a model marked "Fast on this computer".

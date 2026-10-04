@@ -1,0 +1,41 @@
+# Builds LocalAIChat.zip and publishes it as a GitHub Release, either when a version tag
+# (v1.0.0, ...) is pushed or when started by hand from the Actions tab with a version.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to create, like v1.0.1"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build LocalAIChat.zip
+        run: |
+          mkdir -p "build/Local AI Chat"
+          cp -r chatbot organizer connectors launcher README.md "QUICK START.txt" \
+            "Start Local AI Chat - Windows.bat" "Start Local AI Chat - Mac.command" "build/Local AI Chat/"
+          chmod +x "build/Local AI Chat/Start Local AI Chat - Mac.command" "build/Local AI Chat/chatbot/start-mac.command"
+          find build -name __pycache__ -prune -exec rm -rf {} +
+          cd build && zip -qr -X ../LocalAIChat.zip "Local AI Chat"
+          unzip -l ../LocalAIChat.zip | tail -1
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version || github.ref_name }}
+        run: |
+          gh release create "$VERSION" LocalAIChat.zip \
+            --target "$GITHUB_SHA" \
+            --title "Local AI Chat $VERSION" \
+            --notes "Download **LocalAIChat.zip**, unzip it, and double-click the Start file for Windows or Mac. The first run downloads Python and Ollama by itself. Full steps: [QUICK START.txt](https://github.com/${{ github.repository }}/blob/$VERSION/QUICK%20START.txt)."
