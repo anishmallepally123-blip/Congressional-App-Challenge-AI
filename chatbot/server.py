@@ -22,6 +22,7 @@ from urllib.parse import urlparse
 
 import hardware
 import models
+import personal
 import phone
 import router
 
@@ -52,6 +53,9 @@ SYSTEM_PROMPT = (
     "tables and fenced code blocks with a language tag. If you are not sure about "
     "something, say so instead of guessing."
 )
+
+PERSONAL_ACTIONS = ("options", "profile", "memory/add", "memory/delete", "example/add", "example/delete",
+                    "preview", "assistant/create", "assistant/delete")
 
 _capabilities = {}  # model name -> list like ["completion", "tools", "thinking"]
 
@@ -171,9 +175,12 @@ class ChatHandler(SimpleHTTPRequestHandler):
         if connectors_routes and connectors_routes.handle(self):
             return
         routes = {"/api/status": self.status, "/api/system": self.system, "/api/models": self.list_models,
-                  "/api/phone": self.phone_status}
+                  "/api/phone": self.phone_status, "/api/personal": self.personal_status,
+                  "/api/personal/export": self.personal_export}
         if self.path in routes:
             return routes[self.path]()
+        if self.path in ("/personal", "/personal/"):
+            self.path = "/personal.html"
         return super().do_GET()
 
     def do_POST(self):
@@ -185,6 +192,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
             return
         routes = {"/api/chat": self.chat, "/api/pull": self.pull, "/api/delete": self.delete,
                   "/api/phone": self.phone_toggle, "/api/pair": self.pair}
+        routes.update({f"/api/personal/{action}": self.personal_action for action in PERSONAL_ACTIONS})
         if self.path not in routes:
             return self.send_json(404, {"error": "Not found"})
         if not self.same_origin():
@@ -249,6 +257,13 @@ class ChatHandler(SimpleHTTPRequestHandler):
                 name = next(n for n in installed if n in (m["name"], m["name"] + ":latest"))
                 m["capabilities"] = capabilities(name)
                 m["installed_name"] = name
+        me = personal.load()
+        for m in others:
+            a = personal.find_assistant(m["name"], me)
+            if a:
+                m["label"] = a["name"]
+                m["about"] = f"Your own assistant, built on {a['base']}. Change it in Personalize."
+                m["custom"] = True
         runnable = [m["installed_name"] for m in catalog + others if m["installed"] and m["fit"]["speed"] != "blocked"]
         self.send_json(200, {
             "models": runnable,  # names the chat can use (the organizer page reads this too)
@@ -310,6 +325,105 @@ class ChatHandler(SimpleHTTPRequestHandler):
         except (urllib.error.URLError, OSError):
             self.send_json(503, {"error": "Ollama is not running."})
 
+    # ---------- Personalize: profile, memory, examples and custom assistants ----------
+
+    def personal_status(self):
+        data = personal.load()
+        try:
+            installed = installed_models()
+        except (urllib.error.URLError, OSError, ValueError):
+            installed = None
+        if installed is not None:
+            hw = hardware.detect()
+            catalog, others = models.build_list(installed, hw)
+            # Models an assistant can be built on: installed, fits this computer, and not an assistant itself.
+            data["bases"] = [
+                {"name": next(n for n in installed if n in (m["name"], m["name"] + ":latest")), "label": m["label"]}
+                for m in catalog + others
+                if m["installed"] and m["fit"]["speed"] != "blocked" and not personal.find_assistant(m["name"], data)
+            ]
+            for a in data["assistants"]:
+                a["installed"] = a["name"] in installed or a["name"] + ":latest" in installed
+        data["ollama"] = installed is not None
+        self.send_json(200, data)
+
+    def personal_export(self):
+        body = personal.export_jsonl().encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+        self.send_header("Content-Disposition", 'attachment; filename="my-training-examples.jsonl"')
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def personal_action(self, request):
+        action = self.path[len("/api/personal/"):]
+        try:
+            if action == "options":
+                data = personal.set_options(request.get("enabled"), request.get("remember_commands"))
+            elif action == "profile":
+                data = personal.set_profile(request.get("profile"))
+            elif action == "memory/add":
+                data = personal.add_memory(request.get("text"))
+            elif action == "memory/delete":
+                data = personal.delete_memory(request.get("id"))
+            elif action == "example/add":
+                data = personal.add_example(request.get("prompt"), request.get("answer"))
+            elif action == "example/delete":
+                data = personal.delete_example(request.get("id"))
+            elif action == "preview":
+                system, examples = personal.context_for([{"role": "user", "content": str(request.get("question", ""))}],
+                                                        request.get("model"))
+                return self.send_json(200, {"system": system, "examples": examples})
+            elif action == "assistant/create":
+                return self.create_assistant(request)
+            elif action == "assistant/delete":
+                name = str(request.get("name", ""))
+                if personal.find_assistant(name):
+                    try:
+                        ollama("/api/delete", {"model": name}, method="DELETE").close()
+                        _capabilities.pop(name, None)
+                        _capabilities.pop(name + ":latest", None)
+                    except urllib.error.HTTPError:
+                        pass  # already removed from Ollama
+                    except (urllib.error.URLError, OSError):
+                        return self.send_json(503, {"error": "Ollama is not running. Start the Ollama app and try again."})
+                data = personal.delete_assistant(name)
+        except personal.PersonalError as e:
+            return self.send_json(400, {"error": str(e)})
+        self.send_json(200, {"ok": True, "data": data})
+
+    def create_assistant(self, request):
+        """Save a new model in Ollama: an installed model plus the user's instructions and creativity."""
+        try:
+            installed = installed_models()
+        except (urllib.error.URLError, OSError, ValueError):
+            return self.send_json(503, {"error": "Ollama is not running. Start the Ollama app and try again."})
+        base = request.get("base", "")
+        if base not in installed:
+            return self.send_json(400, {"error": "Pick a model you've downloaded to build on."})
+        hw = hardware.detect()
+        if model_entry(base, installed, hw)["fit"]["speed"] == "blocked":
+            return self.send_json(409, {"error": f"{base} is too big for this computer."})
+        taken = set(installed) | {m["name"] for m in models.CATALOG}
+        try:
+            record, payload = personal.assistant_request(
+                request.get("name"), base, request.get("instructions"), request.get("temperature", 0.7), taken)
+        except personal.PersonalError as e:
+            return self.send_json(400, {"error": str(e)})
+        try:
+            ollama_json("/api/create", payload, timeout=300)
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8", "replace")
+            return self.send_json(502, {"error": f"Ollama couldn't create it: {detail}"})
+        except (urllib.error.URLError, OSError, ValueError):
+            return self.send_json(503, {"error": "Ollama is not running. Start the Ollama app and try again."})
+        try:
+            data = personal.save_assistant(record)
+        except personal.PersonalError as e:
+            return self.send_json(400, {"error": str(e)})
+        self.send_json(200, {"ok": True, "data": data})
+
     # ---------- Chatting ----------
 
     def chat(self, request):
@@ -344,8 +458,28 @@ class ChatHandler(SimpleHTTPRequestHandler):
         # The user's adjustable settings for this model, checked so they can't overload the computer.
         by_model = request.get("settings_by_model")
         raw = by_model.get(model) if isinstance(by_model, dict) else request.get("settings")
+        me = personal.load()
+        assistant = personal.find_assistant(model, me)
+        if raw is None and assistant:
+            raw = {"temperature": assistant["temperature"]}  # the creativity chosen when it was made
         options, instructions = models.clean_settings(raw, entry["need_gb"], hw)
         system = SYSTEM_PROMPT
+
+        # "Remember that ..." saves a fact to the user's memory (only from this computer).
+        remembered = None
+        last = messages[-1] if messages and isinstance(messages[-1], dict) else {}
+        fact = personal.remember_request(last.get("content", "")) if last.get("role") == "user" else None
+        if fact and me["enabled"] and me["remember_commands"] and self.is_local():
+            try:
+                me = personal.add_memory(fact)
+                remembered = fact
+            except personal.PersonalError:
+                pass
+
+        # What the user taught it: their profile, memory, saved examples and the assistant's own instructions.
+        about_me, examples = personal.context_for(messages, model, me)
+        if about_me:
+            system += "\n\n" + about_me
         if instructions:
             system += "\n\nThe user gave these extra instructions. Follow them:\n" + instructions
 
@@ -371,6 +505,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
         # Let the model use connectors' tools; notices say if this model can't.
         # (Only on this computer: connectors can reach the user's accounts and files, so phones don't get them.)
         notices = connectors_routes.add_tools(payload, messages, capabilities(model)) if connectors_routes and self.is_local() else []
+        payload["messages"][1:1] = examples  # the user's saved examples go right after the instructions
         tool_calls = []
 
         try:
@@ -406,6 +541,9 @@ class ChatHandler(SimpleHTTPRequestHandler):
                         self.emit({"type": "text", "text": message["content"]})
                     tool_calls += message.get("tool_calls") or []
                     if chunk.get("done"):
+                        if remembered:
+                            self.emit({"type": "notice", "action": "personal", "text":
+                                       f"Saved to your memory: \"{remembered}\". See or delete it in Personalize."})
                         for event in notices:
                             self.emit(event)
                         if tool_calls:

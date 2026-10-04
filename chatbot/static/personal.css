@@ -1,0 +1,75 @@
+/* Same colors as the chat page (style.css) so the two feel like one app. */
+:root {
+  --bg: #faf9f5;
+  --panel: #f0eee6;
+  --text: #1f1e1d;
+  --muted: #6b6a66;
+  --border: #e0ddd3;
+  --accent: #c96442;
+  --accent-text: #ffffff;
+  --code-bg: #2b2a27;
+  --code-text: #f5f4ef;
+  --error: #c0392b;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #262624; --panel: #1f1e1d; --text: #ece9e1; --muted: #a19f97; --border: #3a3936;
+    --code-bg: #171716; --error: #e57368; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #262624; --panel: #1f1e1d; --text: #ece9e1; --muted: #a19f97; --border: #3a3936;
+  --code-bg: #171716; --error: #e57368; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+main { max-width: 860px; margin: 0 auto; padding: 0 16px 40px; }
+header { display: flex; align-items: center; gap: 16px; padding: 14px 0; }
+header h1 { font-size: 20px; font-weight: 600; margin: 0; }
+h2 { font-size: 17px; margin: 0 0 6px; }
+.back { color: var(--muted); text-decoration: none; font-size: 14px; }
+.muted { color: var(--muted); font-size: 14px; }
+.error { color: var(--error); font-size: 14px; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+form.card, .stack { display: flex; flex-direction: column; gap: 6px; }
+label { font-size: 14px; font-weight: 500; margin-top: 6px; }
+label.switch { display: flex; gap: 8px; align-items: center; font-weight: 400; font-size: 15px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.row input { flex: 1; min-width: 200px; }
+.facts { margin: 0 0 8px; padding-left: 20px; font-size: 15px; }
+.facts li { margin-bottom: 4px; }
+details summary { cursor: pointer; color: var(--accent); font-size: 15px; margin-top: 8px; }
+.shortcuts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.shortcuts button { font-size: 13px; padding: 2px 10px; }
+
+button, select, input, textarea { font: inherit; color: inherit; }
+input:not([type="checkbox"]), select, textarea {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); width: 100%;
+}
+textarea { resize: vertical; }
+button, a.button {
+  cursor: pointer; border: 1px solid var(--border); background: transparent; border-radius: 8px;
+  padding: 6px 14px; color: inherit; text-decoration: none; font-size: 15px;
+}
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: default; }
+
+.items { list-style: none; padding: 0; margin: 0; }
+.items li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.items li > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.items li button { font-size: 13px; padding: 2px 10px; flex-shrink: 0; }
+.items .q { font-weight: 500; }
+.items .a { color: var(--muted); white-space: pre-wrap; }
+.items .empty { color: var(--muted); }
+pre {
+  background: var(--code-bg); color: var(--code-text); border-radius: 8px; padding: 12px;
+  white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; max-height: 420px; overflow: auto; margin: 8px 0 0;
+}
