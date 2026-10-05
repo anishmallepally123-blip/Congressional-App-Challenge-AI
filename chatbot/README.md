@@ -13,6 +13,7 @@ A Claude-style chatbot that runs entirely on your own computer. The AI model run
 - Replies stream in word by word, with an optional "Think deeper" mode that shows the AI's reasoning
 - Chat history saved in your browser, grouped by day, with search, rename and delete
 - Edit a message you sent, retry an answer, and copy answers or code with one click
+- **Listen** to any answer read out loud with your computer's built-in voice (code blocks are skipped)
 - Formatted answers: headings, lists, tables and code blocks
 - Settings for text size and light or dark mode, and a layout that works on phones and narrow windows
 - A link to the Folder Organizer when it's installed next to this folder

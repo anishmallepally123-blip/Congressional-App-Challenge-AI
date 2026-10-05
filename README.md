@@ -8,7 +8,7 @@ The AI model runs locally through [Ollama](https://ollama.com), so once a model 
 
 ## What it can do
 
-- **Chat** with a Claude-style assistant: streaming replies, an optional "Think deeper" mode, chat history with search, formatted answers and code blocks, light and dark themes.
+- **Chat** with a Claude-style assistant: streaming replies, an optional "Think deeper" mode, chat history with search, formatted answers and code blocks, light and dark themes, and a Listen button that reads answers out loud with your computer's own voice.
 - **Pick the right model automatically**: hardware detection recommends a model and locks ones that are too big, with downloads and per-model settings right in the app.
 - **Coding help**: bigger coding requests switch to a coding model that fits your computer.
 - **Folder Organizer**: the AI proposes how to tidy a messy folder; nothing changes until you press Apply, and every change can be undone.
