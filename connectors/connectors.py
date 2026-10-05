@@ -33,25 +33,183 @@ TOOLS_PROMPT = (
 )
 
 
-# Ready-made connectors the settings page offers with one click. Most come from the
-# official MCP servers project (github.com/modelcontextprotocol/servers).
-PRESETS = [
-    {"name": "Notes", "needs": "Nothing extra. Works offline.",
-     "about": "An example connector included with this app: save notes and check the date and time.",
-     "config": {"command": "python", "args": [os.path.join(HERE, "examples", "notes_server.py")]}},
-    {"name": "Files", "needs": "Node.js (nodejs.org)",
-     "about": "Read and search files in one folder you choose. Change the last argument to that folder.",
-     "config": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "~/Documents"]}},
-    {"name": "Web pages", "needs": "uv (docs.astral.sh/uv) and an internet connection",
-     "about": "Fetch a web page and read it as text.",
-     "config": {"command": "uvx", "args": ["mcp-server-fetch"]}},
-    {"name": "Memory", "needs": "Node.js (nodejs.org)",
-     "about": "Let the AI remember facts about you between chats.",
-     "config": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"]}},
-    {"name": "GitHub", "needs": "A GitHub access token and an internet connection",
-     "about": "GitHub's own remote connector. Replace YOUR_TOKEN with a personal access token.",
-     "config": {"url": "https://api.githubcopilot.com/mcp/", "headers": {"Authorization": "Bearer YOUR_TOKEN"}}},
-]
+# Ready-made connectors the settings page offers with one click. The ones in
+# servers/ are written in plain Python, so they work on any computer that runs this
+# app, with nothing else to install. "{connectors}" in a path means this folder, so
+# saved settings keep working if the app folder is moved.
+SERVERS = "{connectors}/servers"
+
+
+def _py(script, *args, **extra):
+    return {"command": "python", "args": [f"{SERVERS}/{script}", *args], **extra}
+
+
+def _cloud_folders():
+    """Folders that cloud storage desktop apps keep in sync on this computer, if any."""
+    home = os.path.expanduser("~")
+    cloud = os.path.join(home, "Library", "CloudStorage")  # Mac
+
+    def first(paths):
+        return next((p for p in paths if p and os.path.isdir(p)), None)
+
+    def mac(prefix, sub=""):
+        try:
+            names = sorted(n for n in os.listdir(cloud) if n.startswith(prefix))
+        except OSError:
+            return []
+        return [os.path.join(cloud, n, sub) for n in names]
+
+    drives = [f"{letter}:\\" for letter in "GDEFHIJKLMNOPQRSTUVWXYZ"] if sys.platform == "win32" else []
+    return {
+        "Google Drive": first(mac("GoogleDrive-", "My Drive") + [os.path.join(d, "My Drive") for d in drives]
+                              + [os.path.join(home, "Google Drive", "My Drive"), os.path.join(home, "Google Drive")]),
+        "OneDrive": first([os.environ.get("OneDrive")] + mac("OneDrive") + [os.path.join(home, "OneDrive")]),
+        "Dropbox": first(mac("Dropbox") + [os.path.join(home, "Dropbox")]),
+        "iCloud Drive": first([os.path.join(home, "Library", "Mobile Documents", "com~apple~CloudDocs"),
+                               os.path.join(home, "iCloudDrive")]),
+    }
+
+
+def _documents_folder():
+    home = os.path.expanduser("~")
+    for p in (os.path.join(os.environ.get("OneDrive", ""), "Documents") if os.environ.get("OneDrive") else "",
+              os.path.join(home, "Documents")):
+        if p and os.path.isdir(p):
+            return p
+    return home
+
+
+GOOGLE_CONNECTING = "A browser tab is opening: sign in to Google and press Allow, then come back here."
+FOLDER_FIELD = {"target": "arg", "label": "Folder the AI may use", "placeholder": "Full path to a folder"}
+
+
+def presets():
+    """
+    The presets, grouped for the page. Each may list "fields" the page asks for:
+    {"target": "env", "key": NAME} fills an environment variable (an access key),
+    {"target": "arg"} replaces the last argument (a folder), and
+    {"target": "token"} fills a web connector's access token.
+    """
+    ready = "Ready to use"
+    folders = "Cloud storage on this computer (no sign-in)"
+    accounts = "Online accounts (need a key or a sign-in)"
+    out = [
+        {"name": "Notes", "group": ready, "needs": "Nothing extra. Works offline.",
+         "about": "Save notes and check the date and time. Also an example of how to build a connector.",
+         "config": {"command": "python", "args": ["{connectors}/examples/notes_server.py"]}},
+        {"name": "Files", "group": ready, "needs": "Nothing extra. Works offline.",
+         "about": "Read, search and save files in one folder you choose. It can't see anything outside it.",
+         "config": _py("files_server.py", _documents_folder()), "fields": [FOLDER_FIELD]},
+        {"name": "Web pages", "group": ready, "needs": "An internet connection",
+         "about": "Open a public web page and read its text.",
+         "config": _py("web_server.py")},
+        {"name": "Wikipedia", "group": ready, "needs": "An internet connection",
+         "about": "Search Wikipedia and read articles.",
+         "config": _py("wikipedia_server.py")},
+        {"name": "Weather", "group": ready, "needs": "An internet connection (free, no account)",
+         "about": "Current weather and a 7-day forecast for any town, from Open-Meteo.",
+         "config": _py("weather_server.py")},
+        {"name": "Memory", "group": ready, "needs": "Nothing extra. Works offline.",
+         "about": "Let the AI remember facts about you between chats. Saved only on this computer.",
+         "config": _py("memory_server.py")},
+    ]
+    apps = {
+        "Google Drive": "Google Drive for desktop (google.com/drive/download)",
+        "OneDrive": "OneDrive (built into Windows; onedrive.com/download for Mac)",
+        "Dropbox": "The Dropbox desktop app (dropbox.com/install)",
+        "iCloud Drive": "iCloud Drive (built into Macs; iCloud for Windows from the Microsoft Store)",
+    }
+    for service, path in _cloud_folders().items():
+        name = service + (" folder" if service == "Google Drive" else "")
+        out.append({
+            "name": name, "group": folders, "found": bool(path),
+            "needs": apps[service] + ("" if path else ". Not found on this computer yet."),
+            "about": f"Read and search your {service} files through the copy {service} keeps on this computer. "
+                     "No sign-in or keys needed.",
+            "config": _py("files_server.py", path or ""), "fields": [FOLDER_FIELD],
+        })
+    google_fields = [
+        {"target": "env", "key": "GOOGLE_CLIENT_ID", "label": "Google OAuth client ID",
+         "placeholder": "....apps.googleusercontent.com"},
+        {"target": "env", "key": "GOOGLE_CLIENT_SECRET", "label": "Client secret", "secret": True,
+         "placeholder": "GOCSPX-..."},
+    ]
+    google_setup = ("Google needs every app to have its own sign-in client. Make one for free (about 10 minutes, once): "
+                    "at console.cloud.google.com create a project, turn on the {api} under APIs & Services > Library, "
+                    "set up the OAuth consent screen (External, add yourself as a test user), then Credentials > "
+                    "Create credentials > OAuth client ID > Desktop app. Paste the ID and secret here and press "
+                    "Add and connect: a browser tab opens to sign in. The AI can only read, never change or delete.")
+    out += [
+        {"name": "Google Drive", "group": accounts, "needs": "A Google account and a free Google Cloud sign-in client",
+         "about": "Search and read your Google Docs, Sheets, Slides and files online.",
+         "setup": google_setup.format(api="Google Drive API"),
+         "help": "https://developers.google.com/workspace/guides/create-credentials#desktop-app",
+         "connecting": GOOGLE_CONNECTING,
+         "config": _py("google_server.py", "drive", env={"GOOGLE_CLIENT_ID": "", "GOOGLE_CLIENT_SECRET": ""}),
+         "fields": google_fields},
+        {"name": "Google Calendar", "group": accounts, "needs": "A Google account and a free Google Cloud sign-in client",
+         "about": "See what's coming up on your Google Calendar.",
+         "setup": google_setup.format(api="Google Calendar API") + " You can reuse the same client as Google Drive.",
+         "help": "https://developers.google.com/workspace/guides/create-credentials#desktop-app",
+         "connecting": GOOGLE_CONNECTING,
+         "config": _py("google_server.py", "calendar", env={"GOOGLE_CLIENT_ID": "", "GOOGLE_CLIENT_SECRET": ""}),
+         "fields": google_fields},
+        {"name": "Notion", "group": accounts, "needs": "A Notion integration secret (free, 2 minutes)",
+         "about": "Search, read and add to your Notion pages.",
+         "setup": "At notion.so/profile/integrations press New integration, choose Internal, and copy its secret. "
+                  "Then in Notion open each page the AI may use and add the integration under ••• > Connections.",
+         "help": "https://www.notion.so/profile/integrations",
+         "config": _py("notion_server.py", env={"NOTION_TOKEN": ""}),
+         "fields": [{"target": "env", "key": "NOTION_TOKEN", "label": "Integration secret", "secret": True,
+                     "placeholder": "ntn_..."}]},
+        {"name": "Slack", "group": accounts, "needs": "A Slack app's bot token (free, 5 minutes)",
+         "about": "Read channels and post messages in your Slack workspace.",
+         "setup": "At api.slack.com/apps create an app from scratch. Under OAuth & Permissions add the bot scopes "
+                  "channels:read, channels:history, groups:read, groups:history, chat:write and users:read, press "
+                  "Install to Workspace, and copy the Bot User OAuth Token. Invite the app to channels with /invite.",
+         "help": "https://api.slack.com/apps",
+         "config": _py("slack_server.py", env={"SLACK_BOT_TOKEN": ""}),
+         "fields": [{"target": "env", "key": "SLACK_BOT_TOKEN", "label": "Bot User OAuth Token", "secret": True,
+                     "placeholder": "xoxb-..."}]},
+        {"name": "GitHub", "group": accounts, "needs": "A GitHub personal access token and an internet connection",
+         "about": "GitHub's own remote connector: repositories, issues and pull requests.",
+         "setup": "On github.com go to Settings > Developer settings > Personal access tokens > Fine-grained tokens, "
+                  "make a token for the repositories the AI may use, and paste it here.",
+         "help": "https://github.com/settings/personal-access-tokens/new",
+         "config": {"url": "https://api.githubcopilot.com/mcp/"},
+         "fields": [{"target": "token", "label": "Personal access token", "secret": True, "placeholder": "github_pat_..."}]},
+    ]
+    return out
+
+
+# Older presets ran programs that need Node.js or uv, which most computers don't have.
+# When one of those is saved but its program is missing, switch it to the built-in one.
+OLD_PRESETS = {
+    "@modelcontextprotocol/server-filesystem": "files_server.py",
+    "@modelcontextprotocol/server-memory": "memory_server.py",
+    "mcp-server-fetch": "web_server.py",
+}
+
+
+def _migrate(cfg):
+    if cfg.get("command") not in ("npx", "uvx") or mcp_client.find_command(cfg["command"]):
+        return cfg
+    args = [a for a in cfg.get("args", []) if a != "-y"]
+    script = OLD_PRESETS.get(args[0]) if args else None
+    if not script:
+        return cfg
+    folder = args[1:2] if script == "files_server.py" else []
+    return {**cfg, "command": "python", "args": [f"{SERVERS}/{script}", *folder]}
+
+
+def _expand(cfg):
+    """Fill in "{connectors}" with this folder's real location."""
+    out = dict(cfg)
+    if "args" in out:
+        out["args"] = [a.replace("{connectors}", HERE) for a in out["args"]]
+    if out.get("cwd"):
+        out["cwd"] = out["cwd"].replace("{connectors}", HERE)
+    return out
 
 
 class ConnectorError(Exception):
@@ -146,6 +304,7 @@ class Manager:
         self.conns = {}    # name -> running connection
         self.tools = {}    # name -> tools it offers
         self.errors = {}   # name -> last error message
+        self.user_started = set()  # connectors the user just added or reconnected, so may open a sign-in page
         self.builtins = builtin_connectors()
         self.config = self._load()
 
@@ -162,7 +321,7 @@ class Manager:
         servers = {}
         for name, cfg in (data.get("mcpServers") or {}).items():
             try:
-                servers[name] = _clean_server(cfg)
+                servers[name] = _migrate(_clean_server(cfg))
             except ConnectorError:
                 continue
         builtins = data.get("builtins") or {}
@@ -195,6 +354,11 @@ class Manager:
         if conn and conn.alive:
             return self.tools[name]
         self._stop(name)
+        cfg = _expand(cfg)
+        if name in self.user_started:
+            # Only open a browser sign-in when the user asked, never in the middle of a chat.
+            cfg["env"] = {**cfg.get("env", {}), "LOCAL_AI_CHAT_SIGN_IN": "1"}
+            self.user_started.discard(name)
         try:
             conn = mcp_client.connect(name, cfg)
             tools = conn.list_tools()
@@ -258,6 +422,7 @@ class Manager:
                 cfg["approvals"] = {**old["approvals"], **cfg["approvals"]}
             self._stop(name)
             self.config["mcpServers"][name] = cfg
+            self.user_started.add(name)
             self._save()
             error = None
             if cfg["enabled"]:
@@ -299,6 +464,8 @@ class Manager:
             cfg = self._cfg(name)
             cfg["enabled"] = bool(enabled)
             self.errors.pop(name, None)
+            if enabled:
+                self.user_started.add(name)
             if not enabled:
                 self._stop(name)
             self._save()
@@ -315,6 +482,7 @@ class Manager:
             self._cfg(name)
             self._stop(name)
             self.errors.pop(name, None)
+            self.user_started.add(name)
 
     def close_all(self):
         with self.lock:

@@ -107,7 +107,7 @@ def handle(handler):
 
     try:
         if method == "GET" and path == "/api/connectors":
-            _send_json(handler, 200, {"connectors": manager.status(), "presets": connectors.PRESETS})
+            _send_json(handler, 200, {"connectors": manager.status(), "presets": connectors.presets()})
         elif method == "GET" and path == "/api/connectors/summary":
             rows = [r for r in manager.status(connect=False) if r["enabled"]]
             _send_json(handler, 200, {"connectors": len(rows)})
