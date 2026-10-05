@@ -14,6 +14,7 @@ import os
 import secrets
 import socket
 import threading
+import unicodedata
 from http.server import ThreadingHTTPServer
 
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".local-ai-chat", "phone.json")
@@ -118,12 +119,22 @@ def address():
     return _state["ip"] if _state["enabled"] else None
 
 
+def _same(a, b):
+    """Constant-time compare that also works for text with accents or emoji in it."""
+    return secrets.compare_digest(a.encode("utf-8", "replace"), b.encode("utf-8", "replace"))
+
+
+def _clean_code(code):
+    """Some phone keyboards type wide digits (１２３) or add spaces; turn those into plain 123."""
+    return "".join(unicodedata.normalize("NFKC", str(code)).split())
+
+
 def pair(code):
     """Check a code typed on a phone. Returns a token to remember the phone, or None."""
     with _lock:
         if not _state["enabled"] or not _state["code"]:
             return None
-        if not secrets.compare_digest(str(code).strip(), _state["code"]):
+        if not _same(_clean_code(code), _state["code"]):
             _state["wrong"] += 1
             if _state["wrong"] >= MAX_WRONG_CODES:
                 _state.update(code=_new_code(), wrong=0)
@@ -141,6 +152,6 @@ def is_paired(cookie_header):
         return False
     for part in cookie_header.split(";"):
         name, _, value = part.strip().partition("=")
-        if name == "phone" and any(secrets.compare_digest(value, t) for t in _state["tokens"]):
+        if name == "phone" and any(_same(value, t) for t in _state["tokens"]):
             return True
     return False
