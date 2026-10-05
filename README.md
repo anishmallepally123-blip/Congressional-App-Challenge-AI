@@ -16,6 +16,7 @@ The AI model runs locally through [Ollama](https://ollama.com), so once a model 
 - **Connectors**: plug in third-party tools through the Model Context Protocol (MCP), with an approval card before any tool runs. 15 ready-made ones (Files, Web pages, Wikipedia, Weather, Memory, Google Drive, Google Calendar, Notion, Slack, GitHub and more) work with nothing extra to install.
 - **Personalize**: teach the AI about yourself with a profile, a memory ("remember that..."), example answers it learns the style of, and your own named assistants saved as new Ollama models. Export your examples for real fine-tuning on a strong computer.
 - **Use it on your phone** over your home Wi-Fi after typing a pairing code.
+- **TinyGPT (experimental)**: our own small language model, built and trained from scratch on Shakespeare instead of downloaded ready-made. Download it from the Experimental section of Models; the app runs it itself, without Ollama. See [`experiments/tiny-gpt/`](experiments/tiny-gpt/README.md).
 
 Everything is written with only Python's standard library and plain JavaScript, so there is nothing to `pip install`.
 
@@ -38,6 +39,7 @@ Step-by-step instructions, including what to click on the Windows and Mac securi
 | [`chatbot/`](chatbot/README.md) | The main app: web server, chat page, hardware detection, model catalog, coding router and phone pairing |
 | [`organizer/`](organizer/README.md) | Folder Organizer and Shared Files, loaded by the chatbot when this folder sits next to it |
 | [`connectors/`](connectors/README.md) | MCP connectors so the AI can use third-party tools, with built-in connectors in plain Python |
+| [`experiments/tiny-gpt/`](experiments/tiny-gpt/README.md) | TinyGPT: the from-scratch model's PyTorch code, training data and training scripts |
 | `launcher/` | The Windows setup script used by the Start files (downloads Python and Ollama into `runtime/` on first run) |
 | `docs/` | The public website (GitHub Pages): landing page, walkthrough video, download link and an in-browser demo chat |
 
