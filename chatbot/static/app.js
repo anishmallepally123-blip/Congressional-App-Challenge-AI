@@ -704,9 +704,47 @@ function renameChat(chat) {
   const title = prompt("Rename this chat:", chat.title);
   if (!title || !title.trim()) return;
   chat.title = title.trim().slice(0, 80);
+  chat.autoTitle = false; // the user's name stays
   saveChats();
   renderSidebar();
   renderMain();
+}
+
+// New chats get a quick name from the first message right away, then the model
+// sums the chat up in a few words once it has answered.
+const TITLE_SKIP = new Set(("a an the and or but so to of in on at for with about from by as is are was were be "
+  + "am do does did can could would will should please pls hey hi hello i i'm im me my we our you your it its this "
+  + "that these those what whats what's how why when where which who just really some any like help tell give show "
+  + "explain write make want need know let let's lets get").split(" "));
+
+function quickTitle(text) {
+  const words = text.replace(/```[\s\S]*?(```|$)/g, " ").split(/[.?!\n]/).find((s) => s.trim()) || text;
+  const keep = words.toLowerCase().replace(/[^\p{L}\p{N}'\s-]/gu, " ").split(/\s+/)
+    .filter((w) => w && !TITLE_SKIP.has(w)).slice(0, 5);
+  if (keep.length < 2) return text.replace(/\s+/g, " ").trim().slice(0, 40) || "New chat";
+  return keep.map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+}
+
+async function nameChat(chat, model) {
+  const question = chat.messages[0]?.content;
+  if (!question) return;
+  try {
+    const resp = await fetch("/api/title", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model, question, answer: chat.messages[1]?.content || "" }),
+      signal: AbortSignal.timeout(30000),
+    });
+    const title = resp.ok ? (await resp.json()).title : "";
+    if (!title || !chat.autoTitle) return; // keep the quick name, or the user's own
+    chat.title = title;
+  } catch {
+    return; // the quick name stays
+  }
+  chat.autoTitle = false;
+  saveChats();
+  renderSidebar();
+  if (chat.id === currentId) $("chat-title").textContent = chat.title;
 }
 
 function deleteChat(id) {
@@ -741,7 +779,7 @@ async function send(text) {
   }
   let chat = currentChat();
   if (!chat) {
-    chat = { id: newId(), title: text.replace(/\s+/g, " ").slice(0, 50), messages: [], updated: Date.now() };
+    chat = { id: newId(), title: quickTitle(text), autoTitle: true, messages: [], updated: Date.now() };
     chats.push(chat);
     currentId = chat.id;
   }
@@ -843,6 +881,7 @@ async function streamReply(chat) {
     chat.messages.push({ role: "assistant", content: reply, model, ...(switched ? { switched } : {}), ...(thinking ? { thinking, thinkSeconds } : {}) });
     chat.updated = Date.now();
     saveChats();
+    if (chat.autoTitle && chat.messages.length === 2) nameChat(chat, model);
   }
   renderMain();
   if (notice && !failure) {
