@@ -76,10 +76,34 @@ Browser (static/)  <-->  server.py (port 8000)  <-->  Ollama (port 11434)  <--> 
 - `hardware.py` detects memory (RAM), graphics cards and their memory (VRAM), and free disk space on Windows, Mac and Linux. Run `python hardware.py` to see what it finds.
 - `models.py` holds the list of models and the rules for rating and locking them.
 - `phone.py` lets phones on the same Wi-Fi use the app after typing a code.
+- `personal.py` stores what you teach the AI on the Personalize page (`static/personal.html`) and adds it to each chat. See "Teaching the AI about you" below.
 - `router.py` decides when a message is a bigger coding project that should go to a coding model.
 - `static/index.html`, `style.css` and `app.js` are the chat page. Chats are saved in the browser's local storage.
 - `static/markdown.js` turns the model's Markdown into formatted text. It is built in so the app works offline, and it escapes HTML so a reply can't run code in the page.
 - The system prompt that sets the assistant's personality is at the top of `server.py`.
+
+## Teaching the AI about you
+
+The models are downloaded unchanged from the companies that made them (Qwen from Alibaba, Gemma from Google, Llama from Meta). Open **🧠 Personalize** in the sidebar to teach yours without retraining it:
+
+- **About me**: your name, a bit about you, and how you like answers. Added to every chat.
+- **Memory**: facts to keep in mind. Type "remember that my essay is due Friday" in a chat and it is saved here.
+- **Teach by example**: press **👍 Teach** under a good answer, or write a question and the answer you want. The few saved examples most like each new question are sent before it, so the model copies their style (this is called few-shot prompting).
+- **Your own assistants**: a name, a model to build on, instructions and a creativity level. The app asks Ollama to create a new model from them (`/api/create`), so it shows up in the model list and in `ollama list`. Deleting it removes only that new model.
+- **See what the AI is told** shows exactly the text the app adds, so nothing is hidden.
+
+A switch at the top turns all of it off. It is saved in `~/.local-ai-chat/personal.json` and never leaves the computer. Phones can chat with it but can't change it.
+
+### Advanced: real fine-tuning (not done by the app)
+
+Fine-tuning changes the model's weights and needs an NVIDIA graphics card with 8 GB or more (or an Apple M-series Mac), extra Python packages and some patience, so the app doesn't do it. What it does is export your examples with **Download my examples (.jsonl)**: one `{"messages": [...]}` conversation per line, the format most fine-tuning tools read. With [Unsloth](https://github.com/unslothai/unsloth) (NVIDIA) or [MLX-LM](https://github.com/ml-explore/mlx-lm) (Mac) you can train a LoRA adapter on that file for the same base model you use here, then load it in Ollama with a Modelfile like:
+
+```
+FROM qwen3:4b
+ADAPTER ./my-adapter.gguf
+```
+
+and `ollama create my-model -f Modelfile`. You need dozens to hundreds of good examples for this to help. This path hasn't been tested with this app.
 
 ## Troubleshooting
 
