@@ -113,15 +113,22 @@ function renderPresets(existing) {
   const box = $("presets");
   box.innerHTML = "";
   const have = new Set(existing.map((c) => c.name));
+  let group = null;
+  let grid = null;
   for (const p of presets) {
-    const btn = el("button", { type: "button", className: "preset" },
+    if (p.group !== group) {
+      group = p.group;
+      grid = el("div", { className: "presets" });
+      box.append(el("h3", { className: "preset-group", textContent: group }), grid);
+    }
+    const btn = el("button", { type: "button", className: "preset" + (p.found === false ? " missing" : "") },
       el("strong", { textContent: p.name }),
       el("span", { className: "small", textContent: p.about }),
       el("span", { className: "muted small", textContent: `Needs: ${p.needs}` }));
     btn.disabled = have.has(p.name);
     if (btn.disabled) btn.title = "Already added";
-    btn.onclick = () => fillForm(p.name, p.config);
-    box.append(btn);
+    btn.onclick = () => fillForm(p.name, p.config, p);
+    grid.append(btn);
   }
 }
 
@@ -132,7 +139,10 @@ function setKind(kind) {
 }
 document.querySelectorAll("input[name=kind]").forEach((r) => (r.onchange = () => setKind(r.value)));
 
-function fillForm(name, cfg) {
+let activePreset = null;
+
+function fillForm(name, cfg, preset = null) {
+  activePreset = preset && preset.fields?.length ? preset : null;
   $("name").value = name;
   $("command").value = cfg.command || "";
   $("args").value = (cfg.args || []).join("\n");
@@ -140,10 +150,53 @@ function fillForm(name, cfg) {
   $("url").value = cfg.url || "";
   $("token").value = (cfg.headers?.Authorization || "").replace(/^Bearer\s+/i, "");
   setKind(cfg.url ? "remote" : "local");
+  renderPresetFields(preset, cfg);
   $("add-form").dataset.replace = "";
-  $("add-note").textContent = "Check the details, then press Add and connect.";
+  $("add-note").className = "muted";
+  $("add-note").textContent = activePreset ? "Fill in the boxes above, then press Add and connect." : "Check the details, then press Add and connect.";
   $("add-form").scrollIntoView({ behavior: "smooth" });
-  $("name").focus();
+  (activePreset ? $("preset-fields").querySelector("input") : $("name")).focus();
+}
+
+// A preset's own boxes (a folder, an access key) so nobody has to edit the command.
+function renderPresetFields(preset, cfg) {
+  const box = $("preset-fields");
+  box.innerHTML = "";
+  $("preset-setup").textContent = "";
+  $("preset-box").hidden = !preset || !(preset.fields?.length || preset.setup);
+  $("advanced").open = !activePreset;
+  if (!preset) return;
+  if (preset.setup) {
+    $("preset-setup").append(preset.setup + " ");
+    if (preset.help) $("preset-setup").append(el("a", { href: preset.help, target: "_blank", rel: "noopener", textContent: "Open the setup page" }));
+  }
+  (preset.fields || []).forEach((f, i) => {
+    const id = `preset-field-${i}`;
+    let value = "";
+    if (f.target === "arg") value = (cfg.args || []).at(-1) || "";
+    if (f.target === "env") value = (cfg.env || {})[f.key] || "";
+    const input = el("input", { id, type: f.secret ? "password" : "text", placeholder: f.placeholder || "", value, autocomplete: "off", spellcheck: false });
+    input.dataset.index = i;
+    box.append(el("label", { htmlFor: id, textContent: f.label }), input);
+  });
+}
+
+function applyPresetFields(config) {
+  if (!activePreset) return config;
+  activePreset.fields.forEach((f, i) => {
+    const value = $(`preset-field-${i}`).value.trim();
+    if (f.target === "arg") {
+      if (!value) throw new Error(`Fill in: ${f.label}`);
+      config.args = [...config.args.slice(0, -1), value];
+    } else if (f.target === "env") {
+      if (!value) throw new Error(`Fill in: ${f.label}`);
+      config.env = { ...config.env, [f.key]: value };
+    } else if (f.target === "token") {
+      if (!value) throw new Error(`Fill in: ${f.label}`);
+      config.headers = { Authorization: `Bearer ${value}` };
+    }
+  });
+  return config;
 }
 
 function readForm() {
@@ -152,18 +205,25 @@ function readForm() {
     const config = { url: $("url").value.trim() };
     const token = $("token").value.trim();
     if (token) config.headers = { Authorization: `Bearer ${token}` };
-    return config;
+    return applyPresetFields(config);
   }
   const env = {};
   for (const line of $("env").value.split("\n")) {
     const i = line.indexOf("=");
     if (i > 0) env[line.slice(0, i).trim()] = line.slice(i + 1).trim();
   }
-  return {
+  return applyPresetFields({
     command: $("command").value.trim(),
     args: $("args").value.split("\n").map((a) => a.trim()).filter(Boolean),
     env,
-  };
+  });
+}
+
+function resetForm() {
+  $("add-form").reset();
+  activePreset = null;
+  renderPresetFields(null, {});
+  setKind("local");
 }
 
 $("add-form").addEventListener("submit", async (e) => {
@@ -172,17 +232,16 @@ $("add-form").addEventListener("submit", async (e) => {
   const btn = $("add-btn");
   btn.disabled = true;
   note.className = "muted";
-  note.textContent = "Connecting... (the first time can take a minute while it downloads)";
+  note.textContent = activePreset?.connecting || "Connecting... (the first time can take a minute)";
   try {
     const name = $("name").value.trim();
     const res = await api("/api/connectors/add", { name, config: readForm(), replace: true });
     if (res.error) {
       note.className = "error";
-      note.textContent = `Saved, but it didn't connect: ${res.error.split("\n")[0]}`;
+      note.textContent = `Saved, but it didn't connect: ${res.error.split("\n")[0]} (Fix it with Edit on its card above.)`;
     } else {
       note.textContent = `${name} is connected.`;
-      $("add-form").reset();
-      setKind("local");
+      resetForm();
     }
   } catch (err) {
     note.className = "error";
