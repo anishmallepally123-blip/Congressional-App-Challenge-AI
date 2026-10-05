@@ -7,11 +7,11 @@ text file. Every weight it ends up with was learned here.
 
 ## Be realistic about what it is
 
-| | TinyGPT (small) | TinyGPT (medium) | Qwen3 8B (in the app) |
+| | TinyGPT (small) | TinyGPT (rtx4070) | Qwen3 8B (in the app) |
 |---|---|---|---|
-| Parameters | 0.8 million | 10.8 million | 8,000 million |
+| Parameters | 0.8 million | 25 million | 8,000 million |
 | Training text | 1 MB of Shakespeare | same | trillions of words |
-| Training time | ~7 min on a 4-core CPU | ~1 hour on a GPU (estimate) | months on thousands of GPUs |
+| Training time | ~7 min on a 4-core CPU | ~10-20 min on an RTX 4070 (estimate) | months on thousands of GPUs |
 | What it can do | writes text that *looks* like Shakespeare | spells most words right, keeps the play format | answers questions, writes code |
 
 It will not answer questions or hold a conversation. What it does show is
@@ -98,27 +98,68 @@ the command line.
 - **Train longer.** `--max-iters 5000`. Watch whether val loss keeps falling.
 - **Make it bigger.** `--n-layer 6 --n-embd 192` (n-embd must divide evenly
   by n-head). Bigger learns more but runs slower and memorises small files.
-- **The medium preset.** `--preset medium` is the size of the model in
-  Andrej Karpathy's well-known "Let's build GPT" lesson. Use it on a GPU.
+- **Other presets.** `--preset medium` (10.8M) is the size of the model in
+  Andrej Karpathy's well-known "Let's build GPT" lesson.
 - **Creativity.** `python generate.py --temperature 1.2` for wilder text,
   `0.5` for safer, more repetitive text.
 
 Good experiments for a write-up: plot `out/history.json` (loss over time),
 compare 2 vs 4 vs 8 layers, or train on two different authors and compare.
 
-## GPU
+## Your PC: RTX 4070 + 32 GB RAM
 
-`train.py` uses an NVIDIA GPU (`cuda`) or an Apple Silicon GPU (`mps`)
-automatically if PyTorch can see one, otherwise the CPU. Force one with
-`--device cpu`. The free GPU in Google Colab works: upload this folder and
-run the same commands.
+There is a preset made for this machine, `rtx4070`: 8 layers, 512-wide
+vectors, 8 attention heads, 256 characters of memory, about 25 million
+parameters. It should use only 3-4 GB of the card's 12 GB, so you have room
+to grow it. On that GPU `train.py` also does most of its math in bfloat16
+(16-bit numbers), which RTX 40 cards run about twice as fast, and uses
+PyTorch's fast "flash" attention.
+
+**1. Install the GPU version of PyTorch.** Plain `pip install torch` on
+Windows gives you the CPU-only version, which ignores the 4070. Use:
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cu126
+```
+
+Check it worked; this should print `True NVIDIA GeForce RTX 4070`:
+
+```bash
+python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+```
+
+**2. Train.** `python train.py` now picks `rtx4070` by itself when it finds
+an NVIDIA GPU. The first line it prints should say
+`Preset rtx4070: 25,417,793 parameters, training on cuda (NVIDIA GeForce RTX 4070, bfloat16)`.
+
+**3. Push it further.** Things to try, one at a time so you can tell what
+helped:
+- `--n-layer 12` (about 38M parameters)
+- `--batch-size 128` (uses more video memory, smoother learning)
+- `--block-size 512` (remembers twice as far back)
+- `--max-iters 10000`
+
+Watch the two losses. 1 MB of Shakespeare is small for a 25M-parameter
+model, so at some point val loss will stop falling and start rising while
+train loss keeps dropping. That means it is memorising. `train.py` always
+keeps the checkpoint with the best val loss, so overtraining won't ruin the
+saved model. The real fix is more text (see "Ideas for later"); with
+32 GB of RAM you can load a few hundred MB without trouble.
+
+If you see `CUDA out of memory`, lower `--batch-size` or `--block-size`.
+
+Other machines: `train.py` also uses an Apple Silicon GPU (`mps`) or falls
+back to the CPU, where it picks the `small` preset. Force either with
+`--device cpu` or `--preset small`.
 
 ## What was and wasn't tested
 
 - Tested: the small preset, trained start to finish on a 4-core Linux CPU
   (7 min 14 s, final val loss 1.666), then `generate.py` on the result.
-- Not tested: NVIDIA or Apple GPUs, Windows, macOS, the medium preset's full
-  run. Times for those are estimates.
+- Tested: the `rtx4070` preset builds and trains for 20 steps on CPU, and the
+  fast attention gives the same answers as the step-by-step version.
+- Not tested: any real GPU, including the RTX 4070 and its bfloat16 path,
+  Windows, or macOS. The 4070 training time and memory use are estimates.
 
 ## Credits
 

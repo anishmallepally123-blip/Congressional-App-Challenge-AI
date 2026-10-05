@@ -43,6 +43,11 @@ class SelfAttention(nn.Module):
         super().__init__()
         assert n_embd % n_head == 0, "n_embd must divide evenly by n_head"
         self.n_head = n_head
+        self.dropout_p = dropout
+        # PyTorch has a built-in version of the exact math below that runs
+        # much faster on a GPU ("flash attention"). We use it when it exists,
+        # but the step-by-step version is kept so you can read how it works.
+        self.fast = hasattr(F, "scaled_dot_product_attention")
         # One linear layer makes query, key and value all at once.
         self.qkv = nn.Linear(n_embd, 3 * n_embd)
         # After mixing, one more linear layer blends the heads back together.
@@ -63,6 +68,14 @@ class SelfAttention(nn.Module):
         k = k.view(B, T, self.n_head, hs).transpose(1, 2)
         v = v.view(B, T, self.n_head, hs).transpose(1, 2)
 
+        if self.fast:
+            out = F.scaled_dot_product_attention(
+                q, k, v, is_causal=True,
+                dropout_p=self.dropout_p if self.training else 0.0)
+            out = out.transpose(1, 2).contiguous().view(B, T, C)
+            return self.dropout(self.proj(out))
+
+        # The same thing, step by step.
         # How well does each query match each key? Dividing by sqrt(size)
         # keeps the numbers from getting huge as vectors get longer.
         scores = (q @ k.transpose(-2, -1)) / math.sqrt(hs)

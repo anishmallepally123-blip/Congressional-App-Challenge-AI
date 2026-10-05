@@ -4,7 +4,8 @@ train.py - teach TinyGPT to write like a text file.
 Run:
     python train.py                       # quick CPU run on Shakespeare
     python train.py --data data/my.txt    # your own text
-    python train.py --preset medium       # bigger model (GPU recommended)
+    python train.py --preset rtx4070      # sized for a 12 GB RTX 4070
+    python train.py --preset small        # force the quick CPU-sized model
     python train.py --max-iters 500       # change any setting from the command line
 
 What happens:
@@ -20,6 +21,7 @@ What happens:
 """
 
 import argparse
+import contextlib
 import json
 import os
 import time
@@ -38,12 +40,17 @@ PRESETS = {
     # ~10.8M parameters. Wants a GPU (or a lot of patience).
     "medium": dict(block_size=256, n_embd=384, n_head=6, n_layer=6, dropout=0.2,
                    batch_size=64, learning_rate=3e-4, max_iters=5000),
+    # ~25M parameters. Sized for an NVIDIA RTX 4070 (12 GB of video memory)
+    # with 32 GB of system RAM. Uses roughly 3-4 GB of video memory, so
+    # there is room to raise batch_size or n_layer if you want to push it.
+    "rtx4070": dict(block_size=256, n_embd=512, n_head=8, n_layer=8, dropout=0.2,
+                    batch_size=64, learning_rate=3e-4, max_iters=5000),
 }
 
 DEFAULTS = dict(
     data="data/shakespeare.txt",
     out_dir="out",
-    preset="small",
+    preset="auto",     # auto = rtx4070 if an NVIDIA GPU is found, else small
     eval_every=250,    # how often to check progress
     eval_iters=50,     # how many batches to average when checking
     device="auto",     # auto picks cuda (NVIDIA), mps (Apple), or cpu
@@ -55,7 +62,7 @@ def parse_args():
     p = argparse.ArgumentParser(description="Train TinyGPT from scratch.")
     p.add_argument("--data", default=DEFAULTS["data"])
     p.add_argument("--out-dir", default=DEFAULTS["out_dir"])
-    p.add_argument("--preset", default=DEFAULTS["preset"], choices=PRESETS)
+    p.add_argument("--preset", default=DEFAULTS["preset"], choices=["auto", *PRESETS])
     p.add_argument("--eval-every", type=int, default=DEFAULTS["eval_every"])
     p.add_argument("--eval-iters", type=int, default=DEFAULTS["eval_iters"])
     p.add_argument("--device", default=DEFAULTS["device"])
@@ -66,6 +73,9 @@ def parse_args():
                        ("learning_rate", float), ("max_iters", int)]:
         p.add_argument("--" + name.replace("_", "-"), type=kind, default=None)
     args = vars(p.parse_args())
+    args["device"] = pick_device(args["device"])
+    if args["preset"] == "auto":
+        args["preset"] = "rtx4070" if args["device"] == "cuda" else "small"
     for k, v in PRESETS[args["preset"]].items():
         if args[k] is None:
             args[k] = v
@@ -85,7 +95,16 @@ def pick_device(choice):
 def main():
     cfg = parse_args()
     torch.manual_seed(cfg["seed"])
-    device = pick_device(cfg["device"])
+    device = cfg["device"]
+    # Mixed precision: on an NVIDIA GPU, do most of the math in bfloat16
+    # (16-bit numbers) instead of 32-bit. RTX 30/40 cards do this about twice
+    # as fast and it barely changes the results. On CPU we stay at 32-bit.
+    use_bf16 = device == "cuda" and torch.cuda.is_bf16_supported()
+    if device == "cuda":
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+    autocast = (lambda: torch.autocast("cuda", dtype=torch.bfloat16)) if use_bf16 \
+        else contextlib.nullcontext
     here = os.path.dirname(os.path.abspath(__file__))
     data_path = os.path.join(here, cfg["data"])
     out_dir = os.path.join(here, cfg["out_dir"])
@@ -117,7 +136,10 @@ def main():
 
     model = TinyGPT(len(chars), cfg["block_size"], cfg["n_embd"], cfg["n_head"],
                     cfg["n_layer"], cfg["dropout"]).to(device)
-    print(f"Model has {model.num_params():,} parameters, training on {device}")
+    where = device
+    if device == "cuda":
+        where = f"cuda ({torch.cuda.get_device_name(0)}{', bfloat16' if use_bf16 else ''})"
+    print(f"Preset {cfg['preset']}: {model.num_params():,} parameters, training on {where}")
 
     # AdamW is the standard "how to nudge the weights" rule for transformers.
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg["learning_rate"])
@@ -130,7 +152,8 @@ def main():
             losses = torch.zeros(cfg["eval_iters"])
             for i in range(cfg["eval_iters"]):
                 x, y = get_batch(split)
-                losses[i] = model(x, y)[1].item()
+                with autocast():
+                    losses[i] = model(x, y)[1].item()
             out[split] = losses.mean().item()
         model.train()
         return out
@@ -151,6 +174,7 @@ def main():
             "step": step,
             "losses": losses,
             "data": cfg["data"],
+            "preset": cfg["preset"],
         }, os.path.join(out_dir, "model.pt"))
 
     # 4. The training loop.
@@ -172,7 +196,8 @@ def main():
             break
 
         x, y = get_batch("train")
-        _, loss = model(x, y)          # how wrong was it?
+        with autocast():
+            _, loss = model(x, y)      # how wrong was it?
         optimizer.zero_grad(set_to_none=True)
         loss.backward()                # work out which way to nudge each weight
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # no wild jumps
