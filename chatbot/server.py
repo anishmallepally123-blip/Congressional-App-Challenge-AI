@@ -139,6 +139,24 @@ class ChatHandler(SimpleHTTPRequestHandler):
             allowed.add(f"{phone.address()}:{PORT}")
         return origin is None or urlparse(origin).netloc in allowed
 
+    def host_allowed(self):
+        """
+        Only answer when the page was opened by this computer's own address (or the Wi-Fi
+        address for phones). This stops "DNS rebinding", where a website points its own
+        name at 127.0.0.1 so the browser treats this app as part of that website.
+        """
+        host = self.headers.get("Host")
+        if host is None:
+            return True  # very old clients; browsers always send it
+        port = self.server.server_port
+        allowed = {f"localhost:{port}", f"127.0.0.1:{port}", f"[::1]:{port}"}
+        if phone.address():
+            allowed.add(f"{phone.address()}:{port}")
+        if host.strip().lower() in allowed:
+            return True
+        self.send_json(403, {"error": f"Open the app at http://localhost:{port} instead."})
+        return False
+
     def is_local(self):
         """True when the request comes from this computer, not a phone on the Wi-Fi."""
         return self.client_address[0] in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
@@ -176,7 +194,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
         self.wfile.flush()
 
     def do_GET(self):
-        if not self.remote_allowed("GET"):
+        if not self.host_allowed() or not self.remote_allowed("GET"):
             return
         if organizer_routes and organizer_routes.handle(self):
             return
@@ -192,7 +210,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
-        if not self.remote_allowed("POST"):
+        if not self.host_allowed() or not self.remote_allowed("POST"):
             return
         if organizer_routes and organizer_routes.handle(self):
             return
