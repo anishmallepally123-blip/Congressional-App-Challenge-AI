@@ -157,6 +157,7 @@ async function checkStatus() {
   }
   $("organizer-link").hidden = !hasOrganizer;
   $("files-link").hidden = !hasOrganizer;
+  $("personal-link").hidden = isPhone;
   document.body.classList.toggle("on-phone", isPhone);
   if (ollamaUp && paired) await loadModels();
   renderModelButton();
@@ -622,6 +623,8 @@ function messageEl(m, index, chat) {
     wrap.append(content, el("div", { class: "actions" },
       el("button", { onclick: (e) => copyText(e.target, m.content) }, "Copy"),
       isLast ? el("button", { onclick: regenerate, title: "Ask again for a different answer" }, "↻ Retry") : null,
+      isPhone ? null : el("button", { onclick: (e) => saveExample(e.target, chat, index),
+        title: "Save this question and answer so the AI answers more like this from now on" }, "👍 Teach"),
       m.model ? el("span", { class: "model-tag" }, findModel(m.model)?.label || m.model) : null));
   } else {
     content.textContent = m.content;
@@ -630,6 +633,26 @@ function messageEl(m, index, chat) {
       el("button", { onclick: () => editMessage(index), title: "Change this message and ask again" }, "✎ Edit")));
   }
   return wrap;
+}
+
+// Save a question and its answer as an example on the Personalize page (personal.py).
+async function saveExample(button, chat, index) {
+  const question = chat.messages.slice(0, index).reverse().find((m) => m.role === "user");
+  if (!question) return toast("There's no question before this answer to save.");
+  try {
+    const resp = await fetch("/api/personal/example/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: question.content, answer: chat.messages[index].content }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || "Couldn't save the example.");
+    button.textContent = "✓ Saved";
+    button.disabled = true;
+    toast("Saved. The AI will answer similar questions like this. Edit it in Personalize.");
+  } catch (err) {
+    toast(err.message);
+  }
 }
 
 function renderMessages() {
@@ -864,6 +887,8 @@ async function streamReply(chat) {
   if (notice && !failure) {
     const action = notice.action === "coding-models"
       ? el("button", { class: "chip", onclick: () => openModels("coding-models") }, "See coding models")
+      : notice.action === "personal"
+      ? el("a", { class: "chip", href: "/personal" }, "Open Personalize")
       : el("button", { class: "chip", onclick: () => openModelSettings(findModel(model)) }, "Open settings");
     messagesEl.append(el("div", { class: "msg notice" }, el("div", { class: "note" }, "ℹ️ " + notice.text + " "), action));
     scrollToBottom();

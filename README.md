@@ -14,6 +14,7 @@ The AI model runs locally through [Ollama](https://ollama.com), so once a model 
 - **Folder Organizer**: the AI proposes how to tidy a messy folder; nothing changes until you press Apply, and every change can be undone.
 - **Shared Files**: let the AI read and answer questions from folders you choose, and see which files it looked in.
 - **Connectors**: plug in third-party tools through the Model Context Protocol (MCP), with an approval card before any tool runs.
+- **Personalize**: teach the AI about yourself with a profile, a memory ("remember that..."), example answers it learns the style of, and your own named assistants saved as new Ollama models. Export your examples for real fine-tuning on a strong computer.
 - **Use it on your phone** over your home Wi-Fi after typing a pairing code.
 
 Everything is written with only Python's standard library and plain JavaScript, so there is nothing to `pip install`.
@@ -55,4 +56,5 @@ The organizer and connectors folders plug into the chatbot's server, and their p
 ```
 python3 -m unittest discover -s organizer -p "test_*.py"
 python3 -m unittest discover -s connectors -p "test_*.py"
+python3 -m unittest discover -s chatbot -p "test_*.py"
 ```

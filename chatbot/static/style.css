@@ -395,3 +395,4 @@ body.on-phone .phone-setting, body.on-phone a[href="/connectors"] { display: non
   .model-card { flex-direction: column; }
   .model-card .side { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
 }
+a.chip { border: 1px solid var(--border); color: inherit; text-decoration: none; }
