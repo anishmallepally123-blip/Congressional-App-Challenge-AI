@@ -86,6 +86,71 @@ memorising (train loss drops, val loss climbs).
 scores for the next character, rolls weighted dice to pick one, adds it, and
 repeats.
 
+## Using it in the chat app
+
+TinyGPT is in the app's **Models** list under **Experimental**. Press
+Download, then "Use this", then type the start of a line like `ROMEO:`.
+
+The app has no PyTorch, so it can't open `model.pt`. Instead:
+
+1. `python export.py` packs the trained weights into
+   `release/tinygpt-shakespeare.bin`, a 3 MB file of plain numbers.
+2. `chatbot/tinygpt.py` reads that file and runs the same math as
+   `model.py`, written out in plain Python. It writes about 30 letters a
+   second on an ordinary CPU, and it checks out against PyTorch: the scores
+   for the next letter match to within 0.000003.
+3. Download in the app copies the file from this folder if it's there, or
+   fetches it from this GitHub repository (the release zip doesn't include
+   this folder).
+
+The shipped file is the small preset trained for 5,000 steps. To put your
+own training run in the app, train, then run `python export.py` and
+commit the new `release/tinygpt-shakespeare.bin`. Keep it to the small
+preset: the app's plain-Python version is about 30 times slower on the
+25M-parameter `rtx4070` model, roughly one letter a second.
+
+## Keep it training
+
+`keep_training.py` trains in the background for as long as you let it, and
+picks up where it left off each time. On Windows, one command makes it start
+whenever you log in:
+
+```powershell
+cd experiments\tiny-gpt
+powershell -ExecutionPolicy Bypass -File .\keep-training-windows.ps1 -Install
+```
+
+What that sets up:
+
+- **Only while you're away.** It waits until the mouse and keyboard have been
+  untouched for 5 minutes, and pauses (handing back the video memory) as soon
+  as you use the PC again. So it won't slow down games or schoolwork.
+- **Low priority**, so anything else you run comes first.
+- **Saves every 500 steps** to `out/last.pt`, so turning the PC off loses at
+  most a few minutes. The best model so far is kept in `out/model.pt`.
+- **Updates the chat app.** Each time it beats its best score it re-exports,
+  and TinyGPT in the app uses the newer model on your next message.
+- **Progress** goes to `out/keep-training.log`.
+
+Control it with `-Pause`, `-Resume`, `-Stop`, `-Status` and `-Uninstall`
+(same command, different word at the end). It trains the small model, the size the
+app can run quickly. To train the bigger `rtx4070` model instead, or change
+the 5 minutes, edit the `$Options` line near the top of the script (the
+comment above it says how). On
+a Mac or Linux, just run `python keep_training.py` and leave the window open.
+
+**More hours won't keep making it better on the same text.** After a while
+it starts memorising Shakespeare instead of learning patterns: the val loss
+stops falling and creeps up. The log says so when that happens. What keeps
+it learning is *more, different text*: drop more `.txt` files into `data/`
+(for example plays and poems from Project Gutenberg) and it reads them in at
+its next check, without restarting. Two limits: once trained, its alphabet
+is fixed, so characters it has never seen (like digits, if you started with
+Shakespeare) are skipped; and if you change the kind of text completely, the
+app's name "TinyGPT Shakespeare" will no longer fit.
+
+To start over from scratch, stop it and delete the `out` folder.
+
 ## Things to change and try
 
 All settings are at the top of `train.py`, and any of them can be set on
@@ -158,6 +223,12 @@ back to the CPU, where it picks the `small` preset. Force either with
   (7 min 14 s, final val loss 1.666), then `generate.py` on the result.
 - Tested: the `rtx4070` preset builds and trains for 20 steps on CPU, and the
   fast attention gives the same answers as the step-by-step version.
+- Tested in the app: Download, chat and Remove, with automated tests
+  (`chatbot/test_tinygpt.py`) and in a real browser against a stand-in for
+  Ollama.
+- Tested `keep_training.py` on Linux CPU: fresh start, pause, resume, stop
+  and carry on from the save, and the app export. Not tested: the Windows
+  script, idle detection and low priority, which only run on Windows.
 - Not tested: any real GPU, including the RTX 4070 and its bfloat16 path,
   Windows, or macOS. The 4070 training time and memory use are estimates.
 
@@ -175,7 +246,8 @@ assistant; list that in your app challenge disclosure.
   Gutenberg) and the medium preset gets noticeably better.
 - **Word-piece tokenizer.** Swap the character tokenizer for byte-pair
   encoding so it reads whole word chunks.
-- **Run it in the app via Ollama.** Ollama loads GGUF files. That would mean
-  rewriting the model to match a supported architecture (such as Llama) and
-  converting the weights with llama.cpp's tools. Doable, but a project in
-  itself.
+- **Run it through Ollama instead.** The app runs TinyGPT itself today,
+  which is slow for bigger presets. Ollama loads GGUF files and would use
+  the GPU, but that means rewriting the model to match an architecture it
+  supports (such as Llama) and converting the weights with llama.cpp's
+  tools. Doable, but a project in itself.

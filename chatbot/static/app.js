@@ -101,7 +101,7 @@ async function readLines(resp, onEvent) {
   if (buffer.trim()) onEvent(JSON.parse(buffer));
 }
 
-const gb = (n) => `${Math.round(n * 10) / 10} GB`;
+const gb = (n) => (n < 0.1 ? `${Math.max(1, Math.round(n * 1000))} MB` : `${Math.round(n * 10) / 10} GB`);
 const TIER_TEXT = { phone: "📱 Phone size", laptop: "💻 Laptop size", desktop: "🖥️ Desktop size", workstation: "🖥️ 32 to 64 GB computers" };
 const SPEED_TEXT = { fast: "Fast on this computer", good: "Runs well", slow: "Slow on this computer", blocked: "Too big for this computer" };
 
@@ -174,6 +174,9 @@ async function loadModels() {
     const resp = await fetch("/api/models");
     if (!resp.ok) throw new Error();
     modelInfo = await resp.json();
+    modelInfo.experimental ||= [];
+    // Experimental models run in this app instead of Ollama, but chat the same way.
+    modelInfo.models.push(...modelInfo.experimental.filter((m) => m.installed).map((m) => m.installed_name));
   } catch {
     modelInfo = null;
     return;
@@ -182,7 +185,7 @@ async function loadModels() {
   const usable = modelInfo.models;
   if (!usable.includes(currentModel())) {
     const recommended = allModels().find((m) => m.name === modelInfo.recommended && m.installed);
-    const firstChat = allModels().find((m) => m.installed && !m.coding && usable.includes(m.installed_name));
+    const firstChat = allModels().find((m) => m.installed && !m.coding && !m.experimental && usable.includes(m.installed_name));
     setModel(recommended ? recommended.installed_name : firstChat ? firstChat.installed_name : usable[0] || "");
   }
 }
@@ -193,7 +196,7 @@ setInterval(() => { if (ollamaUp === false) checkStatus(); }, 3000);
 // ---------- Models ----------
 
 const currentModel = () => localStorage.getItem(MODEL_KEY) || "";
-const allModels = () => (modelInfo ? [...modelInfo.catalog, ...modelInfo.others] : []);
+const allModels = () => (modelInfo ? [...modelInfo.catalog, ...modelInfo.others, ...modelInfo.experimental] : []);
 const findModel = (name) => allModels().find((m) => m.installed_name === name || m.name === name);
 
 function setModel(name) {
@@ -225,6 +228,7 @@ function modelCard(m) {
 
   const title = el("div", { class: "title" }, m.label,
     m.name === modelInfo.recommended || m.name === modelInfo.recommended_coder ? el("span", { class: "badge" }, "★ Recommended for you") : null,
+    m.experimental ? el("span", { class: "badge experimental" }, "🧪 Experimental") : null,
     m.installed ? el("span", { class: "badge installed" }, "Installed") : null);
 
   const meta = el("div", { class: "meta" },
@@ -278,6 +282,12 @@ function renderModels() {
       ? "When you ask for a bigger coding project, like a game, website or app, the chat switches to your best installed coding model. Simple code questions stay with your chat model. You can turn this off in Settings."
       : "Auto-switching is off in Settings, so coding models are only used when you pick one yourself."));
   modelInfo.catalog.filter((m) => m.coding).forEach((m) => cards.append(modelCard(m)));
+  if (modelInfo.experimental.length) {
+    cards.append(el("h3", { id: "experimental-models" }, "Experimental"),
+      el("p", { class: "note" }, "Models built and trained from scratch in this project instead of downloaded ready-made. "
+        + "They are tiny and still being worked on, so expect odd results."));
+    modelInfo.experimental.forEach((m) => cards.append(modelCard(m)));
+  }
   if (modelInfo.others.length) {
     cards.append(el("h3", {}, "Other models you installed"));
     modelInfo.others.forEach((m) => cards.append(modelCard(m)));
@@ -401,7 +411,7 @@ function renderModelSettings() {
 
   const lengths = [
     { value: 512, label: "Short" }, { value: 1024, label: "Medium" },
-    { value: 2048, label: "Long" }, { value: -1, label: "No limit" },
+    { value: 2048, label: "Long" }, { value: -1, label: m.experimental ? "Standard" : "No limit" },
   ];
   const memory = (m.context || []).map((o) => ({ value: o.value, label: `${o.value / 1024}K`, locked: !o.ok }));
 
@@ -409,17 +419,20 @@ function renderModelSettings() {
   instructions.value = s.instructions;
   instructions.addEventListener("input", () => saveModelSetting(name, "instructions", instructions.value));
 
-  $("model-settings-body").replaceChildren(
+  $("model-settings-body").replaceChildren(...[
     el("p", { class: "note" }, "Changes save automatically and apply to your next message."),
     settingRow("Creativity", "Lower gives focused, factual answers. Higher gives more varied, imaginative ones.",
       el("div", { class: "slider-row" }, el("span", { class: "small" }, "Precise"), slider, el("span", { class: "small" }, "Creative"), sliderValue)),
-    settingRow("Answer length", "The longest an answer can be. Short is about 400 words; Long is about 1,500.", choiceGroup(name, "num_predict", lengths)),
-    settingRow("Conversation memory", "How much of the chat the AI can remember. More memory uses more of your computer's RAM. Locked sizes are too big for this computer.", choiceGroup(name, "num_ctx", memory)),
-    settingRow("Custom instructions", "Tell the AI how to answer every time you chat with this model.", instructions),
+    m.experimental
+      ? settingRow("Answer length", "About how many letters it writes. Standard is about 600; Long is about 2,000.", choiceGroup(name, "num_predict", lengths))
+      : settingRow("Answer length", "The longest an answer can be. Short is about 400 words; Long is about 1,500.", choiceGroup(name, "num_predict", lengths)),
+    // TinyGPT always remembers its last 128 letters and can't follow instructions, so these don't apply.
+    m.experimental ? null : settingRow("Conversation memory", "How much of the chat the AI can remember. More memory uses more of your computer's RAM. Locked sizes are too big for this computer.", choiceGroup(name, "num_ctx", memory)),
+    m.experimental ? null : settingRow("Custom instructions", "Tell the AI how to answer every time you chat with this model.", instructions),
     el("div", { class: "dialog-buttons" },
       el("button", { onclick: () => { delete modelSettings[name]; store(MODEL_SETTINGS_KEY, modelSettings); renderModelSettings(); toast("Settings reset to defaults."); } }, "Reset to defaults"),
       el("button", { class: "primary", onclick: () => $("model-settings-dialog").close() }, "Done")),
-  );
+  ].filter(Boolean));
 }
 
 function openModelSettings(m) {

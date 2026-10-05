@@ -432,6 +432,7 @@ dialog::backdrop { background: rgba(15, 14, 12, 0.42); backdrop-filter: blur(3px
 .model-card .side button { font-size: 0.9em; }
 .model-card .remove { font-size: 0.75em; padding: 2px 8px; color: var(--faint); border: none; }
 .badge { font-size: 0.68em; font-weight: 650; letter-spacing: 0.02em; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.badge.experimental { background: color-mix(in srgb, var(--slow) 16%, transparent); color: var(--slow); }
 .badge.installed { background: color-mix(in srgb, var(--fast) 14%, transparent); color: var(--fast); }
 .speed { display: inline-flex; align-items: center; gap: 7px; }
 .progress { width: 160px; height: 6px; border-radius: 999px; background: var(--border); overflow: hidden; }

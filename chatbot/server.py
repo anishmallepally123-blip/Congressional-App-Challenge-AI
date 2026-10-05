@@ -26,6 +26,7 @@ import models
 import personal
 import phone
 import router
+import tinygpt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -276,6 +277,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
             "models": runnable,  # names the chat can use (the organizer page reads this too)
             "catalog": catalog,
             "others": others,
+            "experimental": [tinygpt_entry(hw)],  # our own models; they run in this app, not in Ollama
             "recommended": models.recommend(hw),
             "recommended_coder": models.recommend(hw, coding=True),
             "system": hw,
@@ -286,6 +288,8 @@ class ChatHandler(SimpleHTTPRequestHandler):
     def pull(self, request):
         """Download a model from the catalog, streaming progress to the page."""
         name = request.get("model", "")
+        if name == tinygpt.ENTRY["name"]:
+            return self.pull_tinygpt()
         entry = next((m for m in models.CATALOG if m["name"] == name), None)
         if not entry:
             return self.send_json(400, {"error": "That model isn't in the app's list."})
@@ -321,8 +325,22 @@ class ChatHandler(SimpleHTTPRequestHandler):
         except (urllib.error.URLError, OSError, ValueError) as e:
             self.emit({"type": "error", "message": f"Download stopped: {e}"})
 
+    def pull_tinygpt(self):
+        self.start_stream()
+        try:
+            tinygpt.download(lambda done, total: self.emit(
+                {"type": "progress", "status": "pulling tinygpt", "completed": done, "total": total}))
+            self.emit({"type": "done"})
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            self.emit({"type": "error", "message": f"Download stopped: {e}"})
+
     def delete(self, request):
         name = request.get("model", "")
+        if name == tinygpt.ENTRY["name"]:
+            tinygpt.remove()
+            return self.send_json(200, {"ok": True})
         try:
             ollama("/api/delete", {"model": name}, method="DELETE").close()
             _capabilities.pop(name, None)
@@ -439,6 +457,8 @@ class ChatHandler(SimpleHTTPRequestHandler):
         messages = request.get("messages")
         if not model or not isinstance(messages, list):
             return self.send_json(400, {"error": "Bad request"})
+        if model == tinygpt.ENTRY["name"]:
+            return self.chat_tinygpt(request, messages)
 
         try:
             installed = installed_models()
@@ -565,6 +585,48 @@ class ChatHandler(SimpleHTTPRequestHandler):
             # The user pressed Stop or closed the tab.
             pass
 
+    def chat_tinygpt(self, request, messages):
+        """TinyGPT runs right here. It continues the user's latest message, one character at a time."""
+        if not tinygpt.installed():
+            return self.send_json(404, {"error": "TinyGPT isn't downloaded. Pick another in Models."})
+        last = messages[-1] if messages and isinstance(messages[-1], dict) else {}
+        prompt = str(last.get("content", "")).replace("\r", "") if last.get("role") == "user" else ""
+        by_model = request.get("settings_by_model")
+        raw = by_model.get(tinygpt.ENTRY["name"]) if isinstance(by_model, dict) else request.get("settings")
+        options, _ = models.clean_settings(raw, tinygpt.ENTRY["need_gb"], hardware.detect())
+        # "Longest answer" is in tokens for other models; TinyGPT writes characters.
+        length = 600 if options["num_predict"] < 0 else min(options["num_predict"], 2000)
+        try:
+            model = tinygpt.load()
+        except (OSError, ValueError) as e:
+            return self.send_json(500, {"error": f"TinyGPT couldn't load: {e}"})
+
+        self.start_stream()
+        self.emit({"type": "model", "name": tinygpt.ENTRY["name"], "switched": False, "reason": None})
+        try:
+            notes = []
+            if len(messages) == 1:  # explain once, at the start of a chat
+                notes.append("Experimental: TinyGPT was built from scratch in this project and only learned from "
+                             "Shakespeare. It continues your text; it doesn't understand questions.")
+            if any(c not in model.stoi for c in prompt):
+                notes.append("It skipped characters it never saw in Shakespeare, like digits or emoji.")
+            text, sent = "", 0
+            for ch in model.generate(prompt, length + 300, options["temperature"]):
+                text += ch
+                # Past the length, stop at the next blank line so it ends on a whole speech.
+                done = len(text) >= length and text.endswith("\n\n")
+                if done or len(text) - sent >= 8 or ch == "\n":  # send a few characters at a time
+                    self.emit({"type": "text", "text": text[sent:]})
+                    sent = len(text)
+                if done:
+                    break
+            if sent < len(text):
+                self.emit({"type": "text", "text": text[sent:]})
+            if notes:
+                self.emit({"type": "notice", "text": " ".join(notes)})
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
     def title(self, request):
         """Ask the model for a short name for a new chat, based on its first question and answer."""
         model = request.get("model")
@@ -572,6 +634,8 @@ class ChatHandler(SimpleHTTPRequestHandler):
         answer = str(request.get("answer") or "")[:600]
         if not model or not question.strip():
             return self.send_json(400, {"error": "Bad request"})
+        if model == tinygpt.ENTRY["name"]:
+            return self.send_json(200, {"title": ""})  # it can't summarize; the page keeps its quick name
         try:
             if model not in installed_models():
                 return self.send_json(404, {"error": "That model isn't installed."})
@@ -590,6 +654,14 @@ class ChatHandler(SimpleHTTPRequestHandler):
         except (urllib.error.URLError, OSError, ValueError):
             return self.send_json(503, {"error": "Couldn't reach Ollama."})
         self.send_json(200, {"title": clean_title(text)})
+
+
+def tinygpt_entry(hw):
+    """TinyGPT's card for the Models list, shaped like the catalog entries."""
+    have = tinygpt.installed()
+    return dict(tinygpt.ENTRY, installed=have, installed_name=tinygpt.ENTRY["name"] if have else None,
+                capabilities=[], fit={"speed": "good", "reason": "Runs on your processor inside this app, not in Ollama."},
+                context=models.context_options(tinygpt.ENTRY["need_gb"], hw), tier="phone")
 
 
 def clean_title(text):
