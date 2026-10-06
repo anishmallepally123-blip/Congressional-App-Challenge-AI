@@ -9,6 +9,7 @@ A Claude-style chatbot that runs entirely on your own computer. The AI model run
 - Download, switch and remove models from the app, with a progress bar
 - Automatic coding help: simple code questions stay with the chat model, but bigger projects (a game, website, app, or debugging real code) switch to a coding model that fits your computer. The reply shows which model answered, and you can turn this off in Settings
 - Uses files from folders you share (when the Folder Organizer is installed), and says which files it looked in
+- **Attach a text file** (📎, drag and drop, or paste) like notes, an essay draft, a CSV or code, and ask about it. It is read on this computer and never uploaded
 - Adjustable settings for each model, saved separately per model: creativity, answer length, conversation memory (sizes too big for the computer are locked), and custom instructions
 - Replies stream in word by word, with an optional "Think deeper" mode that shows the AI's reasoning
 - Chat history saved in your browser, grouped by day, with search, rename and delete
