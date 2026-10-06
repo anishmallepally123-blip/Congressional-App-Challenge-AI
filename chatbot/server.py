@@ -15,6 +15,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 import webbrowser
@@ -580,6 +581,10 @@ class ChatHandler(SimpleHTTPRequestHandler):
                             self.emit({"type": "text", "text": "\n\n*Looked in: " + ", ".join(sources) + "*"})
                         if chunk.get("done_reason") == "length":
                             self.emit({"type": "notice", "text": "The answer stopped at your length limit. You can change it in this model's settings."})
+                        if chunk.get("eval_count") and chunk.get("eval_duration"):
+                            # How fast this computer wrote the answer (Ollama times it in nanoseconds).
+                            self.emit({"type": "stats", "tokens": chunk["eval_count"],
+                                       "seconds": round(chunk["eval_duration"] / 1e9, 2)})
                         break
         except (BrokenPipeError, ConnectionResetError):
             # The user pressed Stop or closed the tab.
@@ -610,7 +615,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
                              "Shakespeare. It continues your text; it doesn't understand questions.")
             if any(c not in model.stoi for c in prompt):
                 notes.append("It skipped characters it never saw in Shakespeare, like digits or emoji.")
-            text, sent = "", 0
+            text, sent, started = "", 0, time.monotonic()
             for ch in model.generate(prompt, length + 300, options["temperature"]):
                 text += ch
                 # Past the length, stop at the next blank line so it ends on a whole speech.
@@ -622,6 +627,8 @@ class ChatHandler(SimpleHTTPRequestHandler):
                     break
             if sent < len(text):
                 self.emit({"type": "text", "text": text[sent:]})
+            if text:  # TinyGPT writes one character per token
+                self.emit({"type": "stats", "tokens": len(text), "seconds": round(time.monotonic() - started, 2)})
             if notes:
                 self.emit({"type": "notice", "text": " ".join(notes)})
         except (BrokenPipeError, ConnectionResetError):

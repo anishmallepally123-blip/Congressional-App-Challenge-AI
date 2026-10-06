@@ -638,7 +638,9 @@ function messageEl(m, index, chat) {
       isLast ? el("button", { onclick: regenerate, title: "Ask again for a different answer" }, "↻ Retry") : null,
       isPhone ? null : el("button", { onclick: (e) => saveExample(e.target, chat, index),
         title: "Save this question and answer so the AI answers more like this from now on" }, "👍 Teach"),
-      m.model ? el("span", { class: "model-tag" }, findModel(m.model)?.label || m.model) : null));
+      m.model ? el("span", { class: "model-tag" }, findModel(m.model)?.label || m.model) : null,
+      m.speed ? el("span", { class: "model-tag speed", title: "How fast this computer wrote the answer. A token is a word or part of a word." },
+        `⚡ ${m.speed >= 10 ? Math.round(m.speed) : m.speed} tokens/sec`) : null));
   } else {
     content.textContent = m.content;
     wrap.append(content, el("div", { class: "actions", style: "justify-content:flex-end" },
@@ -821,6 +823,7 @@ async function streamReply(chat) {
   let thinkSeconds = null;
   let failure = null;
   let notice = null;
+  let speed = null; // tokens per second, measured on this computer
   let toolCalls = null; // tools the model asked for (connectors_routes)
   controller = new AbortController();
 
@@ -864,6 +867,8 @@ async function streamReply(chat) {
           body.innerHTML = renderMarkdown(reply);
         } else if (ev.type === "notice") {
           notice = ev;
+        } else if (ev.type === "stats") {
+          if (ev.seconds > 0) speed = Math.round((ev.tokens / ev.seconds) * 10) / 10;
         } else if (ev.type === "tool_calls") {
           toolCalls = ev.calls;
         } else if (ev.type === "error") {
@@ -891,7 +896,7 @@ async function streamReply(chat) {
   setBusy(false);
   if (reply) {
     if (thinkSeconds == null && thinking) thinkSeconds = Math.max(1, Math.round((Date.now() - thinkStart) / 1000));
-    chat.messages.push({ role: "assistant", content: reply, model, ...(switched ? { switched } : {}), ...(thinking ? { thinking, thinkSeconds } : {}) });
+    chat.messages.push({ role: "assistant", content: reply, model, ...(switched ? { switched } : {}), ...(thinking ? { thinking, thinkSeconds } : {}), ...(speed ? { speed } : {}) });
     chat.updated = Date.now();
     saveChats();
     if (chat.autoTitle && chat.messages.length === 2) nameChat(chat, model);
