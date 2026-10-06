@@ -604,6 +604,7 @@ document.querySelectorAll("[data-phone]").forEach((b) => b.addEventListener("cli
 function renderMain() {
   const chat = currentChat();
   $("chat-title").textContent = chat ? chat.title : "New chat";
+  $("save-chat").hidden = true;
   if (chat && chat.messages.length) return renderMessages();
   messagesEl.innerHTML = "";
   if (ollamaUp === null) return;
@@ -611,6 +612,42 @@ function renderMain() {
   const ready = ollamaUp && modelInfo && modelInfo.models.length;
   messagesEl.append(ready ? welcomeScreen() : setupScreen());
 }
+
+// ---------- Saving a chat as a file ----------
+// Makes a Markdown file (it opens as plain text anywhere) so a chat can be kept,
+// printed or handed in. Built in the browser, so nothing is uploaded.
+
+function chatAsMarkdown(chat) {
+  const when = new Date(chat.updated || Date.now()).toLocaleString();
+  const lines = [`# ${chat.title}`, "", `_Saved from Local AI Chat (last message ${when}). The AI ran on this computer._`, ""];
+  for (const m of chat.messages) {
+    if (m.role === "user") lines.push("## You", "", m.content, "");
+    else if (m.role === "assistant" && m.content) {
+      const who = m.model ? findModel(m.model)?.label || m.model : "AI";
+      lines.push(`## ${who}`, "", m.content, "");
+    }
+  }
+  return lines.join("\n");
+}
+
+function fileName(title) {
+  const safe = title.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 60);
+  return `${safe || "chat"}.md`;
+}
+
+function saveChat() {
+  const chat = currentChat();
+  if (!chat || !chat.messages.length) return;
+  const blob = new Blob([chatAsMarkdown(chat)], { type: "text/markdown;charset=utf-8" });
+  const link = el("a", { href: URL.createObjectURL(blob), download: fileName(chat.title) });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  toast(`Saved "${fileName(chat.title)}" to your downloads.`);
+}
+
+$("save-chat").addEventListener("click", saveChat);
 
 // ---------- Messages ----------
 
@@ -670,6 +707,7 @@ async function saveExample(button, chat, index) {
 
 function renderMessages() {
   const chat = currentChat();
+  $("save-chat").hidden = false;
   messagesEl.innerHTML = "";
   chat.messages.forEach((m, i) => {
     if (m.role === "tool") return; // a tool's answer; shown on its card instead (connectors_routes)
