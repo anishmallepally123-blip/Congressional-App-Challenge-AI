@@ -62,6 +62,9 @@ TITLE_PROMPT = (
     "no quotes, no ending punctuation, no extra words."
 )
 
+FILE_CHARS = 20_000  # of each attached file, so a laptop model still has room to answer
+MAX_FILES = 3
+
 PERSONAL_ACTIONS = ("options", "profile", "memory/add", "memory/delete", "example/add", "example/delete",
                     "preview", "assistant/create", "assistant/delete")
 
@@ -459,6 +462,8 @@ class ChatHandler(SimpleHTTPRequestHandler):
             return self.send_json(400, {"error": "Bad request"})
         if model == tinygpt.ENTRY["name"]:
             return self.chat_tinygpt(request, messages)
+        attached = any(isinstance(m, dict) and m.get("files") for m in messages)
+        messages = [with_files(m) for m in messages]
 
         try:
             installed = installed_models()
@@ -509,6 +514,11 @@ class ChatHandler(SimpleHTTPRequestHandler):
             system += "\n\n" + about_me
         if instructions:
             system += "\n\nThe user gave these extra instructions. Follow them:\n" + instructions
+
+        # Attached files need more room than a normal chat, if this computer has it.
+        if attached and options["num_ctx"] < 16384:
+            roomy = [o["value"] for o in models.context_options(entry["need_gb"], hw) if o["ok"]]
+            options["num_ctx"] = max([c for c in roomy if c <= 16384] + [options["num_ctx"]])
 
         # If the user shared folders, add the passages that match their question.
         sources = []
@@ -662,6 +672,21 @@ def tinygpt_entry(hw):
     return dict(tinygpt.ENTRY, installed=have, installed_name=tinygpt.ENTRY["name"] if have else None,
                 capabilities=[], fit={"speed": "good", "reason": "Runs on your processor inside this app, not in Ollama."},
                 context=models.context_options(tinygpt.ENTRY["need_gb"], hw), tier="phone")
+
+
+def with_files(m):
+    """
+    A chat message with the text files the user attached (with the 📎 button) written
+    into it, so the model reads them. The page keeps them apart so the chat stays tidy.
+    """
+    if not isinstance(m, dict) or not isinstance(m.get("files"), list):
+        return m
+    content = str(m.get("content") or "")
+    for f in m["files"][:MAX_FILES]:
+        if isinstance(f, dict) and isinstance(f.get("text"), str):
+            name = str(f.get("name") or "file")[:100]
+            content += f"\n\n--- Attached file: {name} ---\n{f['text'][:FILE_CHARS]}\n--- End of {name} ---"
+    return dict({k: v for k, v in m.items() if k != "files"}, content=content)
 
 
 def clean_title(text):
