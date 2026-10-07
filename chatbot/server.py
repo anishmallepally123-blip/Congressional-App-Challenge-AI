@@ -534,6 +534,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
         notices = connectors_routes.add_tools(payload, messages, capabilities(model)) if connectors_routes and self.is_local() else []
         payload["messages"][1:1] = examples  # the user's saved examples go right after the instructions
         tool_calls = []
+        forgetting = too_long(payload)
 
         try:
             resp = ollama("/api/chat", payload, timeout=600)
@@ -573,6 +574,11 @@ class ChatHandler(SimpleHTTPRequestHandler):
                                        f"Saved to your memory: \"{remembered}\". See or delete it in Personalize."})
                         for event in notices:
                             self.emit(event)
+                        if forgetting:
+                            self.emit({"type": "notice", "text":
+                                       f"This chat is now longer than this model's conversation memory "
+                                       f"({options['num_ctx']:,} tokens), so it may have forgotten how the chat "
+                                       "started. Start a new chat, or give it more memory in this model's settings."})
                         if tool_calls:
                             # The page asks the user, runs the tools, then sends the chat back here.
                             self.emit(connectors_routes.tool_calls_event(tool_calls))
@@ -654,6 +660,15 @@ class ChatHandler(SimpleHTTPRequestHandler):
         except (urllib.error.URLError, OSError, ValueError):
             return self.send_json(503, {"error": "Couldn't reach Ollama."})
         self.send_json(200, {"title": clean_title(text)})
+
+
+def too_long(payload):
+    """
+    True when a chat no longer fits the model's conversation memory (num_ctx). Ollama then
+    quietly drops the oldest messages, so the user should know. A token is about 4 characters.
+    """
+    chars = sum(len(str(m.get("content") or "")) for m in payload["messages"])
+    return chars / 4 > payload["options"]["num_ctx"] * 0.9
 
 
 def tinygpt_entry(hw):
