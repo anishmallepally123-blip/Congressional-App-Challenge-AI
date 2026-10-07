@@ -344,11 +344,14 @@ def _tokens(text):
     for w in WORD.findall(text.lower()):
         if w in STOP or len(w) < 2:
             continue
-        # light stemming so "essays" matches "essay"
-        for suffix in ("ing", "es", "s"):
-            if len(w) > 4 and w.endswith(suffix):
-                w = w[: -len(suffix)]
-                break
+        # light stemming so "essays" matches "essay" and "notes" matches "note"
+        if len(w) > 4:
+            if w.endswith("ing"):
+                w = w[:-3]
+            elif w.endswith(("sses", "xes", "zes", "ches", "shes")):
+                w = w[:-2]  # classes, boxes, quizzes, sketches
+            elif w.endswith("s") and not w.endswith("ss"):
+                w = w[:-1]
         out.append(w)
     return out
 

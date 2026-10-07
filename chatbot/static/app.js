@@ -648,6 +648,21 @@ function messageEl(m, index, chat) {
   return wrap;
 }
 
+// One-tap follow-ups under the latest answer, so students can ask for what they need without typing.
+// (Experimental models like TinyGPT only continue text, so they don't get these.)
+const FOLLOW_UPS = [
+  ["Simpler", "Explain that again more simply, as if I'm new to the topic."],
+  ["Shorter", "Make that shorter. Keep only the key points."],
+  ["More detail", "Go into more detail on that, with an example."],
+  ["Quiz me", "Quiz me on this with 3 short questions, one at a time. Wait for my answer before asking the next one, and tell me if I got it right."],
+];
+
+function followUps() {
+  return el("div", { class: "follow-ups", role: "group", "aria-label": "Follow-up ideas" },
+    ...FOLLOW_UPS.map(([label, prompt]) =>
+      el("button", { class: "chip", title: prompt, onclick: () => { if (!controller) send(prompt); } }, label)));
+}
+
 // Save a question and its answer as an example on the Personalize page (personal.py).
 async function saveExample(button, chat, index) {
   const question = chat.messages.slice(0, index).reverse().find((m) => m.role === "user");
@@ -675,6 +690,10 @@ function renderMessages() {
     if (m.role === "tool") return; // a tool's answer; shown on its card instead (connectors_routes)
     messagesEl.append(m.tool_calls ? ToolChat.savedTurn(m, renderMarkdown) : messageEl(m, i, chat));
   });
+  const last = chat.messages.at(-1);
+  if (last?.role === "assistant" && !last.tool_calls && !findModel(last.model)?.experimental) {
+    messagesEl.lastElementChild?.append(followUps());
+  }
   scrollToBottom();
 }
 
