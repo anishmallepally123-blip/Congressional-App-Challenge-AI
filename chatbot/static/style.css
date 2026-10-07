@@ -310,6 +310,7 @@ header h1 { font-size: 0.95em; font-weight: 600; margin: 0; overflow: hidden; te
 .msg .actions { margin-top: 8px; display: flex; gap: 2px; flex-wrap: wrap; }
 .msg .actions button { font-size: 0.78em; padding: 3px 9px; color: var(--faint); border-color: transparent; border-radius: 7px; }
 .msg .actions button:hover:not(:disabled) { color: var(--text); }
+.follow-ups { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .msg .model-tag { font-size: 0.72em; color: var(--faint); align-self: center; margin-left: 6px; padding: 1px 8px; border: 1px solid var(--border); border-radius: 999px; }
 
 details.thinking { margin-bottom: 12px; font-size: 0.88em; color: var(--muted); }
