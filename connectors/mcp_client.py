@@ -35,6 +35,10 @@ class MCPError(Exception):
     """Anything that went wrong talking to a connector, in words a user can read."""
 
 
+class _SessionExpired(MCPError):
+    """A web connector forgot our session (it restarted), so we must start a new one."""
+
+
 # What to install when a connector's program is missing.
 NEEDS = {
     "npx": "Node.js (nodejs.org)", "node": "Node.js (nodejs.org)", "npm": "Node.js (nodejs.org)",
@@ -264,6 +268,8 @@ class HttpConnection(_Connection):
         try:
             return urllib.request.urlopen(req, timeout=timeout)
         except urllib.error.HTTPError as e:
+            if e.code == 404 and self.session_id:  # MCP's signal that the session is gone
+                raise _SessionExpired("The connector restarted and forgot this session. Press Reconnect.") from e
             if e.code in (401, 403):
                 raise MCPError("The connector refused access. Check the access token in its settings.") from e
             detail = e.read().decode("utf-8", "replace")[:300]
@@ -276,10 +282,19 @@ class HttpConnection(_Connection):
         msg = {"jsonrpc": "2.0", "method": method, **({"params": params} if params else {})}
         self._post(msg, 30).close()
 
-    def _request(self, method, params, timeout=CALL_TIMEOUT):
+    def _request(self, method, params, timeout=CALL_TIMEOUT, retry=True):
         msg_id = next(self._ids)
         msg = {"jsonrpc": "2.0", "id": msg_id, "method": method, "params": params}
-        with self._post(msg, timeout) as resp:
+        try:
+            resp = self._post(msg, timeout)
+        except _SessionExpired:
+            if not retry:
+                raise
+            # The server restarted: start a fresh session, then ask again once.
+            self.session_id = None
+            self.start()
+            return self._request(method, params, timeout, retry=False)
+        with resp:
             if resp.headers.get("Mcp-Session-Id"):
                 self.session_id = resp.headers["Mcp-Session-Id"]
             kind = resp.headers.get("Content-Type", "")
@@ -298,20 +313,23 @@ class HttpConnection(_Connection):
     @staticmethod
     def _read_sse(resp, msg_id):
         """Read Server-Sent Events until the reply to our request arrives."""
+        def ours(data):
+            try:
+                msg = json.loads("\n".join(data))
+            except ValueError:
+                return None
+            return msg if isinstance(msg, dict) and msg.get("id") == msg_id and "method" not in msg else None
+
         data = []
         for raw in resp:
             line = raw.decode("utf-8", "replace").rstrip("\r\n")
             if line.startswith("data:"):
                 data.append(line[5:].lstrip())
             elif not line and data:
-                try:
-                    msg = json.loads("\n".join(data))
-                except ValueError:
-                    msg = None
-                data = []
-                if isinstance(msg, dict) and msg.get("id") == msg_id and "method" not in msg:
+                msg, data = ours(data), []
+                if msg:
                     return msg
-        return None
+        return ours(data) if data else None  # the stream may end without a blank line after its last event
 
     def close(self):
         if self.session_id:
