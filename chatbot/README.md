@@ -34,8 +34,8 @@ The Qwen and Llama models can use tools, which the folder organizer and connecto
 
 The AI runs on your computer, and your phone can use it over the same Wi-Fi:
 
-1. On the computer, open **Settings** and turn **Use on your phone** on. It shows an address and a 6-digit code.
-2. On your phone (connected to the same Wi-Fi), open that address in the browser and type the code.
+1. On the computer, open **Settings** and turn **Use on your phone** on. It shows a QR code, an address and a 6-digit code.
+2. On your phone (connected to the same Wi-Fi), scan the QR code with the camera. It opens the app and connects by itself. Or open the address in the browser and type the code.
 
 The first time, Windows may ask whether to let Python use your network; click **Allow** for private networks. Phones can chat and switch models, but can't download models, change settings, or use the folder organizer, shared files or connectors. Turning it off disconnects every phone. Only turn it on with Wi-Fi you trust, like at home.
 

@@ -572,6 +572,13 @@ function pairScreen() {
     else msg.textContent = (await resp.json().catch(() => ({}))).error || "That didn't work. Try again.";
   };
   code.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  // Opened from the QR code: the code is in the address, so connect right away.
+  const fromQr = new URLSearchParams(location.search).get("code");
+  if (fromQr) {
+    history.replaceState(null, "", location.pathname);
+    code.value = fromQr.replace(/\D/g, "").slice(0, 6);
+    setTimeout(submit);
+  }
   return el("div", { class: "setup" }, el("h2", {}, "Connect to your computer"),
     el("div", { class: "step" }, el("div", { class: "num" }, "📱"), el("div", { style: "flex:1" },
       el("p", {}, "Type the 6-digit code shown on your computer, in Settings under \"Use on your phone\". The AI runs on that computer; this phone just shows the chat."),
@@ -586,6 +593,11 @@ async function renderPhoneSetting() {
   box.replaceChildren();
   if (data.error) box.append(el("p", { class: "note error-text" }, data.error));
   if (data.enabled && data.url) {
+    box.append(el("div", { class: "phone-qr" },
+      el("img", { src: `/api/phone/qr?${data.code}`, alt: "QR code that opens this app on your phone", width: "148", height: "148" }),
+      el("p", {}, el("b", {}, "Scan with your phone's camera"), el("br"),
+        "It opens the app and connects, no typing needed. Your phone must be on the same Wi-Fi.")),
+      el("p", { class: "note" }, "Or type it in:"));
     box.append(el("ol", { class: "phone-steps" },
       el("li", {}, "Connect your phone to the same Wi-Fi as this computer."),
       el("li", {}, "Open this address in your phone's browser: ", el("b", {}, data.url)),
