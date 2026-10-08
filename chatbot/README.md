@@ -30,6 +30,8 @@ You don't have to decide: the app checks your computer and marks one model **Rec
 
 The Qwen and Llama models can use tools, which the folder organizer and connectors need; Gemma can't. Each model is rated **Fast** (fits on your graphics card or Apple chip), **Runs well**, **Slow**, or **Locked** (too big). You can still install other models with `ollama pull <name>`; the app rates and locks those too.
 
+Not sure which model is better for you? With two or more models installed, press **⇄ Compare** under an answer to ask another model the same question and read the two answers one after the other.
+
 ## Using it on your phone
 
 The AI runs on your computer, and your phone can use it over the same Wi-Fi:
