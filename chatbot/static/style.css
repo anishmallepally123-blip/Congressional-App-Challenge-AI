@@ -312,6 +312,19 @@ header h1 { font-size: 0.95em; font-weight: 600; margin: 0; overflow: hidden; te
 .msg .actions button:hover:not(:disabled) { color: var(--text); }
 .msg .model-tag { font-size: 0.72em; color: var(--faint); align-self: center; margin-left: 6px; padding: 1px 8px; border: 1px solid var(--border); border-radius: 999px; }
 
+.peek-view { white-space: pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.92em; line-height: 1.75; }
+.peek-view span { background: color-mix(in srgb, var(--accent) calc(var(--doubt) * 70%), transparent); border-radius: 3px; cursor: pointer; }
+.peek-view span.picked { outline: 2px solid var(--accent); }
+.peek-info { position: sticky; bottom: 8px; box-shadow: 0 4px 18px rgb(0 0 0 / 0.12); margin-top: 10px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); font-size: 0.85em; color: var(--muted); }
+.peek-info b { color: var(--text); }
+.peek-bars { margin-top: 8px; display: grid; gap: 4px; }
+.peek-bars .bar { display: grid; grid-template-columns: 2ch 1fr 4ch; gap: 8px; align-items: center; }
+.peek-bars .ch { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--text); text-align: center; }
+.peek-bars .track { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; }
+.peek-bars .track i { display: block; height: 100%; background: var(--faint); }
+.peek-bars .bar.picked .track i { background: var(--accent); }
+.peek-bars .pct { text-align: right; }
+
 details.thinking { margin-bottom: 12px; font-size: 0.88em; color: var(--muted); }
 details.thinking summary { cursor: pointer; width: fit-content; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); }
 details.thinking .thought { white-space: pre-wrap; border-left: 2px solid var(--border); padding-left: 12px; margin-top: 8px; }

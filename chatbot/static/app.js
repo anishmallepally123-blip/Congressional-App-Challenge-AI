@@ -645,6 +645,7 @@ function messageEl(m, index, chat) {
       el("button", { onclick: (e) => copyText(e.target, m.content) }, "Copy"),
       el("button", { onclick: () => editMessage(index), title: "Change this message and ask again" }, "✎ Edit")));
   }
+  if (m.peek?.length === m.content.length) addPeek(wrap, content, m);
   return wrap;
 }
 
@@ -680,6 +681,48 @@ function renderMessages() {
 
 function scrollToBottom() {
   messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+// "Peek inside" for TinyGPT: color each character by how sure the model was, and show
+// the other characters it was choosing between (tinygpt.py sends them as "peek" events).
+const shownChar = (c) => (c === " " ? "␣" : c === "\n" ? "↵" : c);
+
+function addPeek(wrap, content, m) {
+  const info = el("div", { class: "peek-info", hidden: true });
+  const view = el("div", { class: "content peek-view", hidden: true });
+  [...m.content].forEach((c, i) => {
+    const guesses = m.peek[i] || [];
+    const chance = guesses.find(([g]) => g === c)?.[1] ?? 0;
+    const span = el("span", { "data-i": i }, c);
+    span.style.setProperty("--doubt", (1 - chance).toFixed(2));
+    view.append(span);
+  });
+  const show = (e) => {
+    const i = e.target.dataset?.i;
+    if (i == null) return;
+    view.querySelector(".picked")?.classList.remove("picked");
+    e.target.classList.add("picked");
+    const c = m.content[i];
+    const guesses = m.peek[i];
+    const chance = guesses.find(([g]) => g === c)?.[1];
+    info.replaceChildren(
+      el("div", {}, el("b", {}, `Picked "${shownChar(c)}"`), chance == null ? " (an unlikely pick, outside its top guesses)" : ` with a ${Math.round(chance * 100)}% chance`),
+      el("div", { class: "peek-bars" }, ...guesses.map(([g, p]) => el("div", { class: g === c ? "bar picked" : "bar" },
+        el("span", { class: "ch" }, shownChar(g)),
+        el("span", { class: "track" }, el("i", { style: `width:${Math.max(2, p * 100)}%` })),
+        el("span", { class: "pct" }, `${Math.round(p * 100)}%`)))));
+  };
+  view.addEventListener("mouseover", show);
+  view.addEventListener("click", show);
+  const button = el("button", { title: "See how sure TinyGPT was about each letter it wrote", onclick: () => {
+    const on = view.hidden;
+    view.hidden = info.hidden = !on;
+    content.hidden = on;
+    button.textContent = on ? "🔍 Hide peek" : "🔍 Peek inside";
+    info.replaceChildren(el("div", {}, "Darker letters are ones TinyGPT was less sure about. Point at or tap any letter to see what else it almost wrote."));
+  } }, "🔍 Peek inside");
+  content.after(view, info);
+  wrap.querySelector(".actions")?.prepend(button);
 }
 
 // Copy buttons on code blocks
@@ -822,6 +865,7 @@ async function streamReply(chat) {
   let failure = null;
   let notice = null;
   let toolCalls = null; // tools the model asked for (connectors_routes)
+  const peek = []; // TinyGPT's guesses for each character (addPeek)
   controller = new AbortController();
 
   const nearBottom = () => messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 80;
@@ -866,6 +910,8 @@ async function streamReply(chat) {
           notice = ev;
         } else if (ev.type === "tool_calls") {
           toolCalls = ev.calls;
+        } else if (ev.type === "peek") {
+          peek.push(...ev.guesses);
         } else if (ev.type === "error") {
           failure = { message: ev.message };
         }
@@ -895,6 +941,7 @@ async function streamReply(chat) {
     chat.updated = Date.now();
     saveChats();
     if (chat.autoTitle && chat.messages.length === 2) nameChat(chat, model);
+    if (peek.length) { chat.messages.at(-1).peek = peek; saveChats(); }
   }
   renderMain();
   if (notice && !failure) {

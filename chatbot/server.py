@@ -605,6 +605,8 @@ class ChatHandler(SimpleHTTPRequestHandler):
         self.emit({"type": "model", "name": tinygpt.ENTRY["name"], "switched": False, "reason": None})
         try:
             notes = []
+            guesses = []  # its top guesses for each character, for "Peek inside" on the page
+            model = tinygpt.Peeking(model, guesses)
             if len(messages) == 1:  # explain once, at the start of a chat
                 notes.append("Experimental: TinyGPT was built from scratch in this project and only learned from "
                              "Shakespeare. It continues your text; it doesn't understand questions.")
@@ -616,11 +618,14 @@ class ChatHandler(SimpleHTTPRequestHandler):
                 # Past the length, stop at the next blank line so it ends on a whole speech.
                 done = len(text) >= length and text.endswith("\n\n")
                 if done or len(text) - sent >= 8 or ch == "\n":  # send a few characters at a time
+                    # What it was choosing between for each character, for "Peek inside" on the page
+                    self.emit({"type": "peek", "guesses": guesses[sent:]})
                     self.emit({"type": "text", "text": text[sent:]})
                     sent = len(text)
                 if done:
                     break
             if sent < len(text):
+                self.emit({"type": "peek", "guesses": guesses[sent:]})
                 self.emit({"type": "text", "text": text[sent:]})
             if notes:
                 self.emit({"type": "notice", "text": " ".join(notes)})
