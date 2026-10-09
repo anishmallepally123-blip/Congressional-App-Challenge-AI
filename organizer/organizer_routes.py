@@ -32,7 +32,7 @@ import organizer
 import shared_files
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
-PAGE_FILES = {"organizer.js", "organizer.css", "files.js"}
+PAGE_FILES = {"organizer.js", "organizer.css", "files.js", "preview.js"}
 
 
 def _send_json(handler, status, payload):

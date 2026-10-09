@@ -4,7 +4,10 @@ Lets the local AI tidy a messy folder, like the Desktop or Downloads.
 
 1. You pick a folder (and optionally say how you want it organized).
 2. The local model looks at the file names, sizes and dates and proposes a plan of moves and renames.
-3. You review the plan on a web page and untick anything you want left alone. **Nothing changes on disk until you press Apply.**
+3. You review the plan on a web page and untick anything you want left alone. **Nothing changes on disk until you press Apply.** An **After** preview above the list shows how the folder will look, and updates as you tick and untick files.
+
+   ![After preview](screenshot-preview.png)
+
 4. Every applied change is logged, so **Undo** puts every file back where it was.
 
 If Ollama isn't running, or the model gives an answer that doesn't make sense, it falls back to sorting files into folders by type (Images, Documents, Installers and so on).
