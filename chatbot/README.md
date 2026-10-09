@@ -66,6 +66,8 @@ Or from a terminal in this folder: `python server.py` on Windows, `python3 serve
 
 Your browser opens **http://localhost:8000** automatically. To stop the app, close the terminal window or press **Ctrl+C** in it.
 
+**Prompt shortcuts:** type `/` in the message box for ready-made prompts like `/summarize`, `/quiz`, `/explain` or `/flashcards`, and pick one with Enter. You can save your own from the same menu; they're kept in your browser.
+
 ## How it works
 
 ```
