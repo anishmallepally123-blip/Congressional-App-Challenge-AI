@@ -558,7 +558,21 @@ function welcomeScreen() {
   return el("div", { class: "welcome" },
     el("h2", {}, `${greeting()}! How can I help?`),
     el("p", {}, `Chatting with ${m ? m.label : currentModel()}. Everything stays on this computer.`),
-    el("div", { class: "suggestions" }, ...cards));
+    el("div", { class: "suggestions" }, ...cards),
+    usageLine());
+}
+
+// "So far on this computer": how much the AI has written here, counted from the saved chats.
+function usageLine() {
+  const answers = chats.flatMap((c) => c.messages.filter((m) => m.role === "assistant" && m.content));
+  if (!answers.length) return null;
+  const words = answers.reduce((n, m) => n + (m.content.match(/\S+/g) || []).length, 0);
+  const usedModels = new Set(answers.map((m) => m.model).filter(Boolean)).size;
+  const count = (n, word) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
+  const parts = [count(answers.length, "answer"), count(words, "word"), count(chats.length, "chat")];
+  if (usedModels > 1) parts.push(count(usedModels, "model"));
+  return el("p", { class: "usage-line" }, "💻 So far on this computer: ", el("b", {}, parts.join(" · ")),
+    ". All of it was written here, without sending your chats to an AI company.");
 }
 
 // ---------- Using the app from a phone ----------

@@ -234,6 +234,8 @@ header h1 { font-size: 0.95em; font-weight: 600; margin: 0; overflow: hidden; te
 .welcome { max-width: 700px; margin: 10vh auto 0; text-align: center; }
 .welcome h2 { font-weight: 650; font-size: 2em; letter-spacing: -0.03em; margin: 0 0 8px; }
 .welcome > p { color: var(--muted); margin-top: 0; }
+.welcome > p.usage-line { margin-top: 22px; font-size: 0.85em; color: var(--faint); }
+.usage-line b { color: var(--muted); font-weight: 600; }
 .suggestions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 32px; text-align: left; }
 .suggestion {
   background: var(--card);
