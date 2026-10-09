@@ -183,6 +183,8 @@ def clean_settings(raw, need_gb, hw):
         out["num_predict"] = raw["num_predict"]
     allowed = [o["value"] for o in context_options(need_gb, hw) if o["ok"]] or [2048]
     wanted = raw.get("num_ctx", out["num_ctx"])
+    if not isinstance(wanted, int) or isinstance(wanted, bool):
+        wanted = out["num_ctx"]  # something odd (text, empty, a list): use the default size
     out["num_ctx"] = wanted if wanted in allowed else max(c for c in allowed if c <= max(wanted, allowed[0]))
     if isinstance(raw.get("instructions"), str):
         out["instructions"] = raw["instructions"].strip()[:2000]
