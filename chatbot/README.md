@@ -111,4 +111,5 @@ and `ollama create my-model -f Modelfile`. You need dozens to hundreds of good e
 - **"Ollama is not running"**: open the Ollama app, then refresh the page.
 - **A model is locked**: it needs more memory than this computer has. Pick a smaller one; the reason is shown under each model.
 - **Replies are very slow**: switch to a smaller model, and close other heavy apps.
+- **The computer feels slow after chatting**: the model stays in memory for a few minutes. Open Models and check **In memory now**, which shows each loaded model's size and how much of it is on the graphics card; **Free memory** unloads it right away.
 - **Port 8000 is already in use**: run with another port, for example `PORT=8080 python3 server.py` on Mac or `set PORT=8080 && python server.py` on Windows.
