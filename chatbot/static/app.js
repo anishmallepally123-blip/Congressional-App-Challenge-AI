@@ -714,6 +714,7 @@ function openChat(id) {
 }
 
 function renameChat(chat) {
+  if (controller) return toast("Wait for the answer to finish, or press Stop.");
   const title = prompt("Rename this chat:", chat.title);
   if (!title || !title.trim()) return;
   chat.title = title.trim().slice(0, 80);
@@ -761,6 +762,7 @@ async function nameChat(chat, model) {
 }
 
 function deleteChat(id) {
+  if (controller) return toast("Wait for the answer to finish, or press Stop.");
   if (!confirm("Delete this chat?")) return;
   chats = chats.filter((c) => c.id !== id);
   saveChats();
