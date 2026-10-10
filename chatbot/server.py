@@ -180,6 +180,8 @@ class ChatHandler(SimpleHTTPRequestHandler):
             return
         if organizer_routes and organizer_routes.handle(self):
             return
+        if self.path == "/api/privacy":
+            return self.privacy_report()
         if connectors_routes and connectors_routes.handle(self):
             return
         routes = {"/api/status": self.status, "/api/system": self.system, "/api/models": self.list_models,
@@ -335,6 +337,28 @@ class ChatHandler(SimpleHTTPRequestHandler):
             pass
         except (urllib.error.URLError, OSError, ValueError) as e:
             self.emit({"type": "error", "message": f"Download stopped: {e}"})
+
+    def privacy_report(self):
+        """Settings > Your data: what the app keeps on this computer, and what it talks to."""
+        import privacy  # only needed here
+        home = os.path.join(os.path.expanduser("~"), ".local-ai-chat")
+        places = [
+            ("🧠", "Personalize", personal.DATA_PATH, "Your profile, memories, examples and assistants"),
+            ("🔌", "Connectors", connectors_routes.connectors.CONFIG_PATH if connectors_routes else None,
+             "Which connectors you added and their settings"),
+            ("🗂️", "Organizer", organizer_routes.organizer.DATA_DIR if organizer_routes else None,
+             "Folder plans, undo logs and the list of shared folders"),
+            ("📝", "Notes connector", os.path.join(home, "notes.json"), "Notes saved by the Notes connector"),
+            ("💭", "Memory connector", os.path.join(home, "memory.json"), "Facts saved by the Memory connector"),
+            ("📱", "Phone access", phone.CONFIG_PATH, "Whether phone access is on, and paired phones"),
+            ("🧪", "TinyGPT", tinygpt.MODEL_DIR, "The small model this project trained itself"),
+            ("🤖", "AI models (Ollama)", privacy.ollama_models_dir(), "The models you downloaded"),
+        ]
+        connectors_on = 0
+        if connectors_routes:
+            connectors_on = sum(1 for r in connectors_routes.manager.status(connect=False)
+                                if r["enabled"] and r["kind"] != "builtin")  # built-ins stay on this computer
+        self.send_json(200, privacy.report(places, OLLAMA_URL, phone.status(PORT)["enabled"], connectors_on))
 
     def delete(self, request):
         name = request.get("model", "")
