@@ -48,6 +48,14 @@ class ConnectorTests(unittest.TestCase):
         self.assertIn("Saved", result["text"])
         self.assertIn("Buy milk", self.manager.call("Notes__list_notes", {})["text"])
 
+    def test_status_gives_each_tool_its_key_and_inputs_for_try_it(self):
+        self.add_notes()
+        tool = next(t for t in self.manager.status()[0]["tools"] if t["name"] == "add_note")
+        self.assertEqual(tool["key"], "Notes__add_note")
+        self.assertIn("text", tool["schema"]["properties"])
+        result = self.manager.call(tool["key"], {"text": "tried by hand"})
+        self.assertFalse(result["is_error"])
+
     def test_off_tools_are_hidden_from_the_model(self):
         self.add_notes()
         self.manager.set_approval("Notes", "add_note", "off")
