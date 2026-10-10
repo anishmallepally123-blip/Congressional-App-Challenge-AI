@@ -16,6 +16,7 @@ A Claude-style chatbot that runs entirely on your own computer. The AI model run
 - Formatted answers: headings, lists, tables and code blocks
 - Settings for text size and light or dark mode, and a layout that works on phones and narrow windows
 - A link to the Folder Organizer when it's installed next to this folder
+- **Settings > Your data** shows everything the app keeps, where each file is on your computer and how big it is, and what the app talks to over the network, so you can check for yourself that nothing leaves your computer ([screenshot](screenshots/your-data.png))
 
 ## Which model should I use?
 
