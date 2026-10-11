@@ -61,6 +61,24 @@ $("plan-form").addEventListener("submit", async (e) => {
   }
 });
 
+// Exact copies of the same file (same contents, any name). Extra copies are moved aside, never deleted.
+$("find-duplicates").addEventListener("click", async () => {
+  if (!$("folder").reportValidity()) return;
+  const note = $("form-note");
+  $("find-duplicates").disabled = $("make-plan").disabled = true;
+  note.className = "muted";
+  note.textContent = "Looking for duplicate files...";
+  try {
+    showPlan(await api("/api/organizer/plan", { folder: $("folder").value, mode: "duplicates" }));
+    note.textContent = "";
+  } catch (err) {
+    note.className = "error";
+    note.textContent = err.message;
+  } finally {
+    $("find-duplicates").disabled = $("make-plan").disabled = false;
+  }
+});
+
 function showPlan(p) {
   plan = p;
   $("plan").hidden = false;

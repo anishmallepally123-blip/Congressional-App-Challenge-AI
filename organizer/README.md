@@ -9,6 +9,10 @@ Lets the local AI tidy a messy folder, like the Desktop or Downloads.
 
 If Ollama isn't running, or the model gives an answer that doesn't make sense, it falls back to sorting files into folders by type (Images, Documents, Installers and so on).
 
+**Find duplicates** looks for exact copies of the same file, even with different names (like `essay.docx` and `essay (1).docx`), by comparing their contents. It keeps one of each, choosing a name without "copy" or "(1)", or else the oldest, and plans to move the extra copies into a `Duplicates` folder. Nothing is deleted. Review the plan, press Apply, check the folder and delete it yourself, or press Undo. It doesn't need an AI model.
+
+![Find duplicates](screenshot-duplicates.png)
+
 Like the chatbot, it uses only Python's standard library. Nothing to install.
 
 ## Safety rules
