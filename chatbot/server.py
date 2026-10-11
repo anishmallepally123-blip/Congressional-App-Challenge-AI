@@ -14,6 +14,7 @@ Run it with:  python server.py   (then open http://localhost:8000)
 import json
 import os
 import re
+import socket
 import sys
 import urllib.error
 import urllib.request
@@ -674,10 +675,60 @@ def clean_title(text):
     return " ".join(words[:8])[:60] if words else ""
 
 
+def port_in_use(port):
+    """True if some program already answers on this port of this computer."""
+    try:
+        socket.create_connection(("127.0.0.1", port), timeout=0.5).close()
+        return True
+    except OSError:
+        return False
+
+
+def app_already_on(port):
+    """True if Local AI Chat itself (not some other program) answers on this port."""
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/status", timeout=2) as r:
+            return "paired" in json.loads(r.read())
+    except (urllib.error.URLError, OSError, ValueError, TypeError):
+        return False
+
+
+def open_server():
+    """Start listening on PORT, or on the next free port if another program already has it.
+
+    Port 8000 is popular with other programs (school coding tools, other local servers). Without
+    this, the app crashed with a long error the first time it met one, and the launcher closed.
+    """
+    global PORT
+    fixed = "PORT" in os.environ  # someone picked the port on purpose; don't move it
+    for port in [PORT] if fixed else range(PORT, PORT + 10):
+        if app_already_on(port):
+            return None, port
+        if port_in_use(port):
+            continue
+        try:
+            server = ThreadingHTTPServer(("127.0.0.1", port), ChatHandler)
+        except OSError:
+            continue
+        if port != PORT:
+            print(f"Another program is using port {PORT}, so Local AI Chat is using port {port} instead.")
+            print("Chats you saved while it was on another port stay with that port's page.")
+        PORT = port
+        return server, port
+    if fixed:
+        sys.exit(f"Port {PORT} is being used by another program. Close it, or set PORT to a different number.")
+    sys.exit(f"Ports {PORT} to {PORT + 9} are all being used by other programs. Close one of them and try again.")
+
+
 def main():
     hardware.detect()  # check the computer once at startup so the page loads quickly
-    server = ThreadingHTTPServer(("127.0.0.1", PORT), ChatHandler)
-    url = f"http://localhost:{PORT}"
+    server, port = open_server()
+    url = f"http://localhost:{port}"
+    if server is None:
+        print(f"Local AI Chat is already running at {url}. Opening it in your browser.")
+        if "--no-browser" not in sys.argv:
+            webbrowser.open(url)
+        return
     print(f"Local AI Chat is running at {url}")
     phone.restore(ChatHandler, PORT)
     if phone.address():
