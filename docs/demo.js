@@ -99,14 +99,16 @@ function splitThinking(raw) {
   return { thinking: raw.slice(open + 7, close).trim(), answer: raw.slice(close + 8).trimStart(), done: true };
 }
 
-function renderAssistant(bubble, raw, streaming) {
+function renderAssistant(bubble, raw, streaming, note = "") {
   const { thinking, answer, done } = splitThinking(raw);
   let html = "";
   if (thinking) {
-    const label = done ? "Thought it through" : "Thinking…";
-    html += `<details class="thinking"${done ? "" : " open"}><summary>${label}</summary><div>${escapeHtml(thinking)}</div></details>`;
+    const label = done ? "Thought it through" : streaming ? "Thinking…" : "Stopped while thinking";
+    html += `<details class="thinking"${done || !streaming ? "" : " open"}><summary>${label}</summary><div>${escapeHtml(thinking)}</div></details>`;
   }
   html += renderMarkdown(answer);
+  // Kept apart from the model's text so a note is never hidden inside an unfinished <think> block.
+  if (note) html += `<p class="note">${escapeHtml(note)}</p>`;
   bubble.innerHTML = html;
   bubble.classList.toggle("cursor", streaming);
   return answer;
@@ -129,6 +131,7 @@ async function send(text) {
 
   let raw = "";
   let answer = "";
+  let finish = null;
   try {
     const stream = await engine.chat.completions.create({
       messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history.slice(-12)],
@@ -139,20 +142,37 @@ async function send(text) {
     });
     for await (const chunk of stream) {
       raw += chunk.choices[0]?.delta?.content || "";
+      finish = chunk.choices[0]?.finish_reason || finish;
       answer = renderAssistant(bubble, raw, true);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
   } catch (err) {
     console.error(err);
-    raw += "\n\n*Something went wrong while answering. Try again.*";
+    finish = "error";
   }
-  answer = renderAssistant(bubble, raw, false);
-  history.push({ role: "assistant", content: answer });
+  answer = renderAssistant(bubble, raw, false, endNote(finish, answer));
+  if (answer.trim()) {
+    history.push({ role: "assistant", content: answer });
+  } else {
+    history.pop(); // no answer came, so don't send the unanswered question back next time
+  }
 
   busy = false;
   sendBtn.disabled = false;
   stopBtn.hidden = true;
   input.focus();
+}
+
+// Explains why an answer ended early, or is missing, in plain words.
+function endNote(finish, answer) {
+  if (finish === "error") return "Something went wrong while answering. Try again.";
+  if (finish === "abort") return answer.trim() ? "" : "You stopped it before it answered.";
+  if (finish === "length") {
+    return answer.trim()
+      ? "The answer was cut off at the demo's length limit."
+      : "It used all its room thinking and didn't get to answer. Untick \u201cThink deeper\u201d or ask something simpler.";
+  }
+  return answer.trim() ? "" : "It didn't give an answer. Try asking again.";
 }
 
 function autosize() {
