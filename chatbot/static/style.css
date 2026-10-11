@@ -184,6 +184,8 @@ a { color: var(--accent); text-underline-offset: 2px; }
 #chat-list li.chat button { border: none; padding: 0 5px; color: var(--faint); opacity: 0; font-size: 0.95em; }
 #chat-list li.chat button:hover:not(:disabled) { color: var(--text); background: transparent; }
 #chat-list li.chat:hover button, #chat-list li.chat.active button, #chat-list li.chat button:focus { opacity: 1; }
+#chat-list li.chat button.pin { filter: grayscale(1); }
+#chat-list li.chat button.pin.on { opacity: 1; filter: none; }
 #chat-list .empty { color: var(--faint); font-size: 0.85em; padding: 8px; }
 .sidebar-link {
   display: block;
