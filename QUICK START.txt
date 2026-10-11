@@ -45,6 +45,8 @@ TO RESTART: double-click the Start file again (it starts in seconds after the fi
 TROUBLESHOOTING
   - The page says Ollama isn't running: close the Start window and start it again.
   - The browser didn't open: go to http://localhost:8000 yourself.
+    If another program was already using that address, the Start window says
+    which address the app uses instead (for example http://localhost:8001).
   - The Start window seems stuck: close it and double-click the Start file again.
     It skips anything already downloaded.
   - Replies are slow: in the model picker choose a model marked "Fast on this computer".
