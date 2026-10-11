@@ -19,6 +19,7 @@ Safety rules, enforced in code no matter what the model says:
 Like the chatbot server, this only uses Python's standard library.
 """
 
+import hashlib
 import json
 import os
 import re
@@ -275,6 +276,76 @@ def make_plan(path, model=None, request=""):
         "note": note,
         "moves": moves,
         "skipped": skipped,
+        "status": "pending",
+    }
+    _save(PLANS_DIR, plan["id"], plan)
+    return plan
+
+
+
+# ---------- Finding duplicate files ----------
+
+COPY_MARK = re.compile(r"( - copy| copy|\s*\(\d+\))$", re.I)
+
+
+def _file_hash(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _keep_first(f):
+    """Which copy to keep: one without "copy" or "(1)" in its name, then the oldest, then the shortest name."""
+    stem = os.path.splitext(f["name"])[0]
+    return (bool(COPY_MARK.search(stem)), f["modified"], len(f["name"]), f["name"].lower())
+
+
+def duplicates_plan(path):
+    """
+    A plan that moves exact copies of the same file into a Duplicates folder, keeping one of each.
+    Nothing is deleted, so the user can check them and delete the folder themselves, or press Undo.
+    """
+    scan = scan_folder(path)
+    root = scan["folder"]
+    files = scan["files"][:MAX_FILES]
+    by_size = {}
+    for f in files:
+        if f["size"] > 0:
+            by_size.setdefault(f["size"], []).append(f)
+    moves, skipped, wasted = [], [], 0
+    for same_size in by_size.values():
+        if len(same_size) < 2:
+            continue
+        by_hash = {}
+        for f in same_size:
+            try:
+                by_hash.setdefault(_file_hash(os.path.join(root, f["name"])), []).append(f)
+            except OSError as e:
+                skipped.append(f"{f['name']}: couldn't be read ({e.strerror or e})")
+        for copies in by_hash.values():
+            if len(copies) < 2:
+                continue
+            keep, *extra = sorted(copies, key=_keep_first)
+            for f in extra:
+                moves.append({"from": f["name"], "to": f"Duplicates/{f['name']}", "reason": f"Same as {keep['name']}"})
+                wasted += f["size"]
+    moves, more_skipped = _clean_moves(root, {"files": files}, moves)
+    note = f"Only the first {MAX_FILES} files were checked." if len(scan["files"]) > MAX_FILES else ""
+    plan = {
+        "id": uuid.uuid4().hex[:12],
+        "folder": root,
+        "created": time.time(),
+        "model": None,
+        "request": "find duplicates",
+        "summary": (f"Found {len(moves)} duplicate file{'s' if len(moves) != 1 else ''} using {_human_size(wasted)}. "
+                    "One copy of each stays; the extra copies go into a Duplicates folder for you to check."
+                    if moves else "No duplicate files found."),
+        "note": note,
+        "moves": moves,
+        "total_files": len(files),
+        "skipped": skipped + more_skipped,
         "status": "pending",
     }
     _save(PLANS_DIR, plan["id"], plan)

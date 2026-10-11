@@ -11,6 +11,7 @@ It answers these and returns True, or returns False for any other path:
     GET  /organizer               the review page
     GET  /organizer/<file>        the page's script and styles
     POST /api/organizer/plan      {"folder", "model", "request"} -> plan
+                                  {"folder", "mode": "duplicates"} -> plan moving extra copies aside
     GET  /api/organizer/plan/<id> -> plan
     POST /api/organizer/apply     {"plan_id", "approved": [names]} -> run log
     POST /api/organizer/undo      {"run_id"} -> report
@@ -101,7 +102,9 @@ def handle(handler):
                 _send_json(handler, 403, {"error": "Requests must come from the app's own page."})
                 return True
             data = _read_json(handler)
-            if action == "plan":
+            if action == "plan" and data.get("mode") == "duplicates":
+                _send_json(handler, 200, organizer.duplicates_plan(data.get("folder", "")))
+            elif action == "plan":
                 plan = organizer.make_plan(data.get("folder", ""), data.get("model"), data.get("request", ""))
                 _send_json(handler, 200, plan)
             elif action == "apply":
