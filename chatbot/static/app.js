@@ -243,7 +243,8 @@ function modelCard(m) {
   } else if (dl) {
     side.append(
       el("div", { class: "progress", role: "progressbar", "aria-valuenow": dl.pct }, el("div", { style: `width:${dl.pct}%` })),
-      el("span", { class: "progress-text" }, dl.text));
+      el("span", { class: "progress-text" }, dl.text),
+      dl.pace ? el("span", { class: "progress-text" }, dl.pace) : null);
   } else if (isPhone && !m.installed) {
     side.append(el("span", { class: "small" }, "Download it on the computer"));
   } else if (m.installed) {
@@ -303,14 +304,33 @@ async function openModels(section) {
   if (typeof section === "string") $(section)?.scrollIntoView({ block: "start" });
 }
 
-function describeProgress(ev) {
+function describeProgress(ev, pace = {}) {
   if (ev.total && ev.status.startsWith("pulling")) {
     const pct = Math.floor((ev.completed / ev.total) * 100);
-    return { pct, text: `Downloading ${pct}% (${gb(ev.completed / 1e9)} of ${gb(ev.total / 1e9)})` };
+    return { pct, text: `Downloading ${pct}% (${gb(ev.completed / 1e9)} of ${gb(ev.total / 1e9)})`, pace: downloadPace(pace, ev) };
   }
   if (ev.status.includes("verifying")) return { pct: 100, text: "Checking the download..." };
   if (ev.status.includes("manifest") || ev.status === "success") return { pct: 100, text: "Finishing up..." };
   return { pct: 0, text: "Starting download..." };
+}
+
+// Download speed and time left, measured over the last few seconds so it doesn't jump around.
+// `pace` remembers recent progress for one download; each part of a model (status "pulling <id>") starts over.
+function downloadPace(pace, ev) {
+  const now = Date.now();
+  if (pace.part !== ev.status) Object.assign(pace, { part: ev.status, samples: [] });
+  pace.samples.push([now, ev.completed]);
+  while (pace.samples.length > 2 && now - pace.samples[0][0] > 8000) pace.samples.shift();
+  const [since, from] = pace.samples[0];
+  if (now - since < 2000 || ev.total < 50e6) return ""; // too early to tell, or a tiny part that's done in a blink
+  const rate = (ev.completed - from) / ((now - since) / 1000);
+  if (rate <= 0) return "";
+  const speed = rate >= 1e6 ? `${(rate / 1e6).toFixed(rate < 1e7 ? 1 : 0)} MB/s` : `${Math.round(rate / 1e3)} KB/s`;
+  const secs = (ev.total - ev.completed) / rate;
+  const left = secs < 60 ? "less than a minute left"
+    : secs < 3600 ? `about ${Math.ceil(secs / 60)} min left`
+    : `about ${Math.floor(secs / 3600)} hr ${Math.ceil((secs % 3600) / 60)} min left`;
+  return `${speed} · ${left}`;
 }
 
 async function download(m) {
@@ -326,10 +346,11 @@ async function download(m) {
     });
     if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error || "Download failed.");
     let last = 0;
+    const pace = {};
     await readLines(resp, (ev) => {
       if (ev.type === "error") failed = ev.message;
       if (ev.type === "progress") {
-        downloads[m.name] = describeProgress(ev);
+        downloads[m.name] = describeProgress(ev, pace);
         if (Date.now() - last > 300) { last = Date.now(); renderModels(); refreshStartScreen(); }
       }
     });
