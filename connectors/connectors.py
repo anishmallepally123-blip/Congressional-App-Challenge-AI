@@ -559,6 +559,8 @@ def clean_messages(messages):
                                  for c in m["tool_calls"] if isinstance(c, dict) and isinstance(c.get("function"), dict)]
         if m["role"] == "tool" and m.get("tool_name"):
             msg["tool_name"] = str(m["tool_name"])
+        if m["role"] == "user" and isinstance(m.get("images"), list):  # pictures, for models that can see
+            msg["images"] = [i for i in m["images"][:2] if isinstance(i, str)]
         out.append(msg)
     return out
 
