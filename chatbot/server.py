@@ -48,6 +48,8 @@ except ImportError:
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 PORT = int(os.environ.get("PORT", "8000"))
 STATIC_DIR = os.path.join(HERE, "static")
+MAX_PHOTOS = 2  # per message; the page shrinks each one to about 100 KB
+PHOTO_CHARS = 4_000_000
 
 SYSTEM_PROMPT = (
     "You are a helpful, friendly AI assistant running locally on the user's computer. "
@@ -96,6 +98,24 @@ def capabilities(name):
         except (urllib.error.URLError, OSError, ValueError):
             return []
     return _capabilities[name]
+
+
+def photos_in(m):
+    """The pictures attached to a chat message (base64 JPEGs from the 📷 button), checked and limited."""
+    photos = m.get("images") if isinstance(m, dict) else None
+    if not isinstance(photos, list):
+        return []
+    return [p for p in photos if isinstance(p, str) and 0 < len(p) <= PHOTO_CHARS
+            and re.fullmatch(r"[A-Za-z0-9+/=]+", p)][:MAX_PHOTOS]
+
+
+def ollama_message(m):
+    """A chat message in the shape Ollama reads, with its pictures if it has any."""
+    out = {"role": m["role"], "content": m["content"]}
+    photos = photos_in(m)
+    if photos:
+        out["images"] = photos
+    return out
 
 
 def model_entry(name, installed, hw):
@@ -470,11 +490,14 @@ class ChatHandler(SimpleHTTPRequestHandler):
         entry = model_entry(model, installed, hw)
         if entry["fit"]["speed"] == "blocked":
             return self.send_json(409, {"error": f"{model} is too big for this computer. {entry['fit']['reason']}"})
+        has_photos = any(photos_in(m) for m in messages)
+        if has_photos and "vision" not in capabilities(model):
+            return self.send_json(400, {"error": f"{model} can't see pictures. Pick a model that can, like Gemma 3 Small, in Models."})
 
         # Bigger coding projects go to a coding model, if one is installed and the user allows it.
         switch_reason = None
         coder = models.best_installed_coder(installed, hw)
-        if request.get("auto_code", True):
+        if request.get("auto_code", True) and not has_photos:  # coding models can't see pictures
             model, switch_reason = router.choose(messages, model, coder)
             entry = model_entry(model, installed, hw)
         suggest_coder = (
@@ -523,7 +546,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
         payload = {
             "model": model,
             "messages": [{"role": "system", "content": system}]
-            + [{"role": m["role"], "content": m["content"]} for m in messages],
+            + [ollama_message(m) for m in messages],
             "options": options,
             "stream": True,
         }
