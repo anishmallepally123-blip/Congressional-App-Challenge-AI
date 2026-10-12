@@ -353,6 +353,25 @@ def _tokens(text):
     return out
 
 
+def _pieces(text, size=700):
+    """The text's paragraphs, with long ones cut into ~size pieces at a line break or a space.
+
+    Word documents, PDFs and spreadsheets often have no blank lines at all, so the whole
+    file is one "paragraph". It must be cut up, not shortened, or most of it can't be found.
+    """
+    for p in text.split("\n\n"):
+        while len(p) > size:
+            cut = p.rfind("\n", 0, size)
+            if cut < size // 2:
+                cut = p.rfind(" ", 0, size)
+            if cut < size // 2:
+                cut = size
+            yield p[:cut]
+            p = p[cut:].lstrip()
+        if p:
+            yield p
+
+
 def _chunks(root, f):
     """Split a file into ~700 character passages. The file name is part of every passage."""
     label = f"{os.path.basename(root)}/{f['rel']}"
@@ -360,12 +379,12 @@ def _chunks(root, f):
     text = f["text"]
     if not text:
         return [(label, "", name_words)]
-    paras, chunks, cur = text.split("\n\n"), [], ""
-    for p in paras:
+    chunks, cur = [], ""
+    for p in _pieces(text):
         if len(cur) + len(p) > 700 and cur:
             chunks.append(cur)
             cur = ""
-        cur += p[:2000] + "\n\n"
+        cur += p + "\n\n"
     if cur.strip():
         chunks.append(cur)
     return [(label, c.strip(), name_words) for c in chunks]
