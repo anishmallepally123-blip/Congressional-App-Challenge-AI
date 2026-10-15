@@ -140,6 +140,8 @@ def remember_request(text):
     fact = match.group(1).strip().rstrip("?.! ")
     if len(fact) < 3 or "\n\n" in fact or fact.lower().startswith(("when ", "what ", "how ", "the time ")):
         return None  # "remember when we..." is a question, not a fact to save
+    if fact.lower().startswith("to ") and not re.search(r"remember\s+that\s", text, re.IGNORECASE):
+        return None  # "remember to bring my calculator" asks for a reminder; saving it would keep it forever
     return fact[:MEMORY_CHARS]
 
 
