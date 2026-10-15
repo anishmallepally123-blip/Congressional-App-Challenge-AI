@@ -86,6 +86,8 @@ class PersonalTests(unittest.TestCase):
         self.assertIsNone(personal.remember_request("Do you remember what I said?"))
         self.assertIsNone(personal.remember_request("remember when we talked about Rome?"))
         self.assertIsNone(personal.remember_request("How do I remember the planets?"))
+        self.assertIsNone(personal.remember_request("Remember to bring my calculator tomorrow"))
+        self.assertEqual(personal.remember_request("remember that to get there I take bus 12"), "to get there I take bus 12")
 
     def test_memory_is_saved_once_and_can_be_deleted(self):
         personal.add_memory("My essay is due Friday")
