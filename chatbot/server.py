@@ -11,6 +11,7 @@ It only uses Python's standard library, so there is nothing to pip install.
 Run it with:  python server.py   (then open http://localhost:8000)
 """
 
+import datetime
 import json
 import os
 import re
@@ -64,6 +65,17 @@ TITLE_PROMPT = (
 
 PERSONAL_ACTIONS = ("options", "profile", "memory/add", "memory/delete", "example/add", "example/delete",
                     "preview", "assistant/create", "assistant/delete")
+
+
+def today_line(now=None):
+    """
+    Models don't know today's date, so "how many days until Friday?" goes wrong.
+    Only the date, not the time: the start of the prompt stays the same all day,
+    so Ollama can keep reusing its work on long chats.
+    """
+    d = now or datetime.date.today()
+    return f"Today is {d:%A, %B} {d.day}, {d.year}."
+
 
 _capabilities = {}  # model name -> list like ["completion", "tools", "thinking"]
 
@@ -490,7 +502,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
         if raw is None and assistant:
             raw = {"temperature": assistant["temperature"]}  # the creativity chosen when it was made
         options, instructions = models.clean_settings(raw, entry["need_gb"], hw)
-        system = SYSTEM_PROMPT
+        system = SYSTEM_PROMPT + " " + today_line()
 
         # "Remember that ..." saves a fact to the user's memory (only from this computer).
         remembered = None
