@@ -63,6 +63,9 @@ _search_cache = {"stamp": None, "chunks": [], "df": Counter(), "avg": 1.0}
 def _xml_text(data, para_tag):
     """Text from Office XML: keeps paragraph breaks, drops all tags."""
     text = data.decode("utf-8", "replace")
+    # Line breaks (Shift+Enter) and tabs inside a paragraph, so words on either side don't run together.
+    text = re.sub(r"<(?:w:br|a:br|text:line-break)\b[^>]*/>", "\n", text)
+    text = re.sub(r"<(?:w:tab|text:tab)\b[^>]*/>", " ", text)
     text = re.sub(rf"</{para_tag}>", "\n", text)
     text = re.sub(r"<[^>]+>", "", text)
     return html.unescape(text)
@@ -91,13 +94,17 @@ def _read_xlsx(path):
             for si in re.findall(r"<si>(.*?)</si>", xml, re.S):
                 shared.append(html.unescape("".join(re.findall(r"<t[^>]*>(.*?)</t>", si, re.S))))
         out = []
-        sheets = sorted(n for n in names if re.fullmatch(r"xl/worksheets/sheet\d+\.xml", n))
+        # In number order, so sheet10 comes after sheet9, not after sheet1.
+        sheets = sorted((n for n in names if re.fullmatch(r"xl/worksheets/sheet\d+\.xml", n)),
+                        key=lambda n: int(re.search(r"\d+", n).group()))
         for n in sheets:
             xml = z.read(n).decode("utf-8", "replace")
             out.append(f"[{os.path.basename(n)[:-4]}]")
-            for row in re.findall(r"<row[^>]*>(.*?)</row>", xml, re.S):
+            # Empty rows and cells are written as <row/> and <c .../>; match them on their own
+            # so they don't swallow the next cell (that showed shared-text numbers instead of words).
+            for row in re.findall(r"<row\b[^>]*?(?:/>|>(.*?)</row>)", xml, re.S):
                 cells = []
-                for attrs, body in re.findall(r"<c([^>]*)>(.*?)</c>", row, re.S):
+                for attrs, body in re.findall(r"<c\b([^>]*?)(?:/>|>(.*?)</c>)", row, re.S):
                     v = re.search(r"<v>(.*?)</v>", body, re.S)
                     inline = re.search(r"<t[^>]*>(.*?)</t>", body, re.S)
                     if 't="s"' in attrs and v and v.group(1).isdigit() and int(v.group(1)) < len(shared):
