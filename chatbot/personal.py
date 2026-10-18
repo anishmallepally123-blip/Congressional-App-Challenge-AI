@@ -291,3 +291,30 @@ def export_jsonl(data=None):
             {"role": "user", "content": e["prompt"]}, {"role": "assistant", "content": e["answer"]}]
         lines.append(json.dumps({"messages": convo}, ensure_ascii=False))
     return "\n".join(lines) + ("\n" if lines else "")
+
+
+# ---------- Role-play: interview a famous person (static/persona.js) ----------
+
+ROLE_CHARS = 60
+
+
+def role_play(name):
+    """
+    Instructions for a chat where the user talks to a historical figure or a story character.
+    Returns "" when `name` isn't usable, so the chat goes on as normal.
+    """
+    if not isinstance(name, str):
+        return ""
+    name = re.sub(r"\s+", " ", name).strip()[:ROLE_CHARS]
+    if len(name) < 2:
+        return ""
+    return (
+        f"Role-play: in this chat, answer as {name}, speaking in the first person in their voice, "
+        "so a student can interview them to learn about their life, work and times. "
+        "Stay in character, but keep the facts true to history (or to the story they come from). "
+        "If you are unsure about a fact, say that the record is unclear instead of making something up. "
+        "If asked about things after their lifetime, say you didn't live to see them, then briefly explain "
+        "as a narrator in a sentence starting with \"(Out of character:\". "
+        "If the name is a living private person, or the user asks you to say something hateful or harmful "
+        "in character, step out of character and kindly decline. Keep answers to a few short paragraphs."
+    )
