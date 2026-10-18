@@ -276,6 +276,39 @@ def delete_assistant(name):
     return _change(lambda data: data.update(assistants=[a for a in data["assistants"] if a["name"] != name]))
 
 
+# ---------- Language practice: a conversation partner (static/practice.js) ----------
+
+LANGUAGES = ("Spanish", "French", "German", "Italian", "Portuguese", "Chinese (Mandarin)", "Japanese",
+             "Korean", "Hindi", "Arabic", "English")
+LEVELS = {
+    "beginner": "a beginner: use short, simple sentences and common words, and put an English translation "
+                "in parentheses after each sentence",
+    "intermediate": "an intermediate learner: use everyday language with some new words, and explain a new "
+                    "word in English in parentheses the first time you use it",
+    "advanced": "an advanced learner: talk naturally, as you would with a native speaker",
+}
+
+
+def language_practice(practice):
+    """
+    Instructions for a chat where the user practices a language with the AI.
+    `practice` is {"language": "Spanish", "level": "beginner"}; returns "" when it isn't usable.
+    """
+    if not isinstance(practice, dict) or practice.get("language") not in LANGUAGES:
+        return ""
+    language = practice["language"]
+    level = LEVELS.get(practice.get("level"), LEVELS["beginner"])
+    return (
+        f"Language practice: be a friendly conversation partner for a student practicing {language}. "
+        f"Write your replies in {language} for {level}. Keep replies short (2 to 4 sentences), "
+        "talk about everyday topics, and end with one question so the conversation keeps going. "
+        f"If the user's last message has mistakes in {language}, end your reply with a short section that "
+        "starts with \"✏️ Corrections:\" and lists each mistake, the corrected version and a few words in "
+        "English on why. If there were no mistakes, leave that section out. If the user writes in English, "
+        f"show them how to say it in {language}, then carry on."
+    )
+
+
 # ---------- Export for real fine-tuning ----------
 
 def export_jsonl(data=None):
