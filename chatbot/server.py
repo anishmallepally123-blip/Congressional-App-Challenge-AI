@@ -503,6 +503,11 @@ class ChatHandler(SimpleHTTPRequestHandler):
             except personal.PersonalError:
                 pass
 
+        # Role-play (static/persona.js): the user is interviewing a famous person.
+        role = personal.role_play(request.get("persona"))
+        if role:
+            system += "\n\n" + role
+
         # What the user taught it: their profile, memory, saved examples and the assistant's own instructions.
         about_me, examples = personal.context_for(messages, model, me)
         if about_me:
