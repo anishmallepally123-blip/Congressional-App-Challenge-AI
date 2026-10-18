@@ -529,6 +529,10 @@ class ChatHandler(SimpleHTTPRequestHandler):
         }
         if "thinking" in capabilities(model):
             payload["think"] = bool(request.get("think"))
+        # Language practice (static/practice.js): the AI chats in the language the student is learning.
+        practice = personal.language_practice(request.get("practice"))
+        if practice:
+            payload["messages"][0]["content"] += "\n\n" + practice
         # Let the model use connectors' tools; notices say if this model can't.
         # (Only on this computer: connectors can reach the user's accounts and files, so phones don't get them.)
         notices = connectors_routes.add_tools(payload, messages, capabilities(model)) if connectors_routes and self.is_local() else []
