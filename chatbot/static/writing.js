@@ -30,6 +30,8 @@
 
   const dialog = el("dialog", { id: "writing-dialog", "aria-labelledby": "writing-title" });
   document.body.append(dialog);
+  // replaceChildren would show a skipped (null) part as the word "null", so leave those out.
+  const setDialog = (...nodes) => dialog.replaceChildren(...nodes.filter((n) => n != null));
   let draft = "";
   let making = null;
 
@@ -117,7 +119,7 @@
     };
     box.addEventListener("input", update);
     update();
-    dialog.replaceChildren(head(),
+    setDialog(head(),
       el("p", { class: "note" }, "The AI fixes spelling, grammar and punctuation, and shows you every change. It runs on this computer, so your writing stays private."),
       box,
       error ? el("p", { class: "note", style: "color:var(--danger)" }, error) : null,
@@ -130,7 +132,7 @@
     const fixes = countFixes(parts);
     const copy = el("button", { class: "primary" }, "Copy fixed text");
     copy.addEventListener("click", () => copyText(copy, after));
-    dialog.replaceChildren(head(),
+    setDialog(head(),
       el("p", { class: "summary" }, fixes ? `✅ ${fixes} ${fixes === 1 ? "fix" : "fixes"}. Red was taken out and green was put in.` : "✅ No mistakes found. Nice writing!"),
       el("div", { class: "diff" }, ...parts.map(([kind, text]) => kind === "same" ? text : el(kind, {}, text))),
       el("p", { class: "note" }, "AI can miss mistakes or change things it shouldn't, so read each change before you use it."),
@@ -143,7 +145,7 @@
   async function run(text) {
     text = text.trim();
     if (!text) return;
-    dialog.replaceChildren(head(), el("p", {}, "Checking your writing... This takes a few seconds with a small model, longer with a big one."));
+    setDialog(head(), el("p", {}, "Checking your writing... This takes a few seconds with a small model, longer with a big one."));
     try {
       const fixed = await correct(text);
       if (!fixed) throw new Error("the AI sent back an empty answer");
