@@ -37,6 +37,8 @@
 
   const dialog = el("dialog", { id: "steps-dialog", "aria-labelledby": "steps-title" });
   document.body.append(dialog);
+  // replaceChildren would show a skipped (null) part as the word "null", so leave those out.
+  const setDialog = (...nodes) => dialog.replaceChildren(...nodes.filter((n) => n != null));
   let problem = "";
   let working = "";
   let making = null;
@@ -101,7 +103,7 @@
     work.addEventListener("input", update);
     go.addEventListener("click", () => run());
     update();
-    dialog.replaceChildren(head(),
+    setDialog(head(),
       el("p", { class: "note" }, "Write your working one step per line. The AI points to the first mistake and gives a hint, not the answer."),
       el("label", {}, "The problem", prob),
       el("label", {}, "Your steps", work),
@@ -120,7 +122,7 @@
           state === "bad" && result.why ? el("p", { class: "why" }, result.why) : null,
           state === "bad" && result.hint ? el("p", { class: "step-hint" }, `💡 Hint: ${result.hint}`) : null));
     });
-    dialog.replaceChildren(head(),
+    setDialog(head(),
       el("p", { class: "summary" }, result.wrong
         ? `Step ${result.wrong} has a mistake.${result.wrong === 2 ? " The step before it looks right." : result.wrong > 2 ? ` The ${result.wrong - 1} steps before it look right.` : ""}`
         : "✅ Every step looks right. Nice work!"),
@@ -135,7 +137,7 @@
   async function run() {
     const steps = splitSteps(working);
     if (!problem.trim() || !steps.length) return;
-    dialog.replaceChildren(head(), el("p", {}, "Checking each step... The AI thinks this through, so it can take a little longer than a normal answer."));
+    setDialog(head(), el("p", {}, "Checking each step... The AI thinks this through, so it can take a little longer than a normal answer."));
     try {
       const result = await check(problem.trim(), steps);
       if (!result) return drawInput("The AI didn't answer in a form the app can read. Try again, or pick a bigger model.");
