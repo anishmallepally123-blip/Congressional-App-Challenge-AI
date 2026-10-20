@@ -29,6 +29,8 @@
 
   const dialog = el("dialog", { id: "flashcards-dialog", "aria-labelledby": "flashcards-title" });
   document.body.append(dialog);
+  // replaceChildren would show a skipped (null) part as the word "null", so leave those out.
+  const setDialog = (...nodes) => dialog.replaceChildren(...nodes.filter((n) => n != null));
   let deck = [];
   let index = 0;
   let flipped = false;
@@ -79,7 +81,7 @@
 
   function draw() {
     const card = deck[index];
-    dialog.replaceChildren(
+    setDialog(
       el("div", { class: "dialog-head" },
         el("h2", { id: "flashcards-title" }, "🃏 Flashcards"),
         el("button", { class: "icon close", "aria-label": "Close", onclick: () => dialog.close() }, "✕")),
@@ -99,7 +101,7 @@
   }
 
   function drawMessage(text, retry) {
-    dialog.replaceChildren(
+    setDialog(
       el("div", { class: "dialog-head" },
         el("h2", { id: "flashcards-title" }, "🃏 Flashcards"),
         el("button", { class: "icon close", "aria-label": "Close", onclick: () => dialog.close() }, "✕")),
