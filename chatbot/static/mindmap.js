@@ -31,6 +31,8 @@
 
   const dialog = el("dialog", { id: "mindmap-dialog", "aria-labelledby": "mindmap-title" });
   document.body.append(dialog);
+  // replaceChildren would show a skipped (null) part as the word "null", so leave those out.
+  const setDialog = (...nodes) => dialog.replaceChildren(...nodes.filter((n) => n != null));
   let map = null;
   let making = null;
 
@@ -173,7 +175,7 @@
   function draw() {
     const holder = el("div", { class: "map" });
     holder.append(drawSvg(map));
-    dialog.replaceChildren(head(), holder,
+    setDialog(head(), holder,
       el("div", { class: "footer" },
         el("button", { class: "primary", onclick: download }, "⬇ Save picture"),
         el("span", { class: "grow" }),
@@ -181,7 +183,7 @@
   }
 
   function drawMessage(text, retry) {
-    dialog.replaceChildren(head(), el("p", {}, text),
+    setDialog(head(), el("p", {}, text),
       retry ? el("button", { class: "primary", onclick: () => remake() }, "Try again") : null);
   }
 
