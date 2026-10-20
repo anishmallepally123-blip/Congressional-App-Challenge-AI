@@ -39,6 +39,8 @@
 
   const dialog = el("dialog", { id: "quiz-dialog", "aria-labelledby": "quiz-title" });
   document.body.append(dialog);
+  // replaceChildren would show a skipped (null) part as the word "null", so leave those out.
+  const setDialog = (...nodes) => dialog.replaceChildren(...nodes.filter((n) => n != null));
   let quiz = [];
   let index = 0;
   let picks = [];
@@ -115,7 +117,7 @@
         el("b", {}, LETTERS[i]), choice);
     });
     const last = index === quiz.length - 1;
-    dialog.replaceChildren(head(),
+    setDialog(head(),
       el("p", { class: "quiz-count" }, `Question ${index + 1} of ${quiz.length}`),
       el("p", { class: "question" }, q.question),
       el("div", { class: "choices" }, ...choices),
@@ -134,7 +136,7 @@
       saveChats();
     }
     const cheer = right === quiz.length ? "Perfect score! 🎉" : right >= quiz.length / 2 ? "Nice work!" : "Keep studying and try again.";
-    dialog.replaceChildren(head(),
+    setDialog(head(),
       el("p", { class: "score" }, `${right} / ${quiz.length}`),
       el("p", { style: "text-align:center;margin:0" }, cheer, chat?.quiz.best > right ? ` Your best is ${chat.quiz.best}.` : ""),
       el("ol", { class: "review" }, ...quiz.map((q, i) =>
@@ -148,7 +150,7 @@
   }
 
   function drawMessage(text, retry) {
-    dialog.replaceChildren(head(), el("p", {}, text),
+    setDialog(head(), el("p", {}, text),
       retry ? el("button", { class: "primary", onclick: () => remake() }, "Try again") : null);
   }
 
