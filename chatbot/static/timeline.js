@@ -32,6 +32,8 @@
 
   const dialog = el("dialog", { id: "timeline-dialog", "aria-labelledby": "timeline-title" });
   document.body.append(dialog);
+  // replaceChildren would show a skipped (null) part as the word "null", so leave those out.
+  const setDialog = (...nodes) => dialog.replaceChildren(...nodes.filter((n) => n != null));
   let events = [];
   let making = null;
 
@@ -101,7 +103,7 @@
   function draw() {
     const copy = el("button", { class: "primary" }, "Copy");
     copy.addEventListener("click", () => copyText(copy, events.map((e) => `${e.when}: ${e.what}`).join("\n")));
-    dialog.replaceChildren(head(),
+    setDialog(head(),
       el("ol", {}, ...events.map((e) => el("li", {}, el("span", { class: "when" }, e.when), e.what))),
       el("p", { class: "note" }, "Made by the AI from this chat. Check dates before using them in schoolwork."),
       el("div", { class: "footer" }, copy, el("span", { class: "grow" }),
@@ -109,7 +111,7 @@
   }
 
   function drawMessage(text, retry) {
-    dialog.replaceChildren(head(), el("p", {}, text),
+    setDialog(head(), el("p", {}, text),
       retry ? el("button", { class: "primary", onclick: () => remake() }, "Try again") : null);
   }
 
