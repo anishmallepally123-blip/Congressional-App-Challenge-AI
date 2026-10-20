@@ -38,6 +38,8 @@
 
   const dialog = el("dialog", { id: "slides-dialog", "aria-labelledby": "slides-title" });
   document.body.append(dialog);
+  // replaceChildren would show a skipped (null) part as the word "null", so leave those out.
+  const setDialog = (...nodes) => dialog.replaceChildren(...nodes.filter((n) => n != null));
   let deck = [];
   let index = 0;
   let making = null;
@@ -106,7 +108,7 @@
     el("button", { class: "icon close", "aria-label": "Close", onclick: () => close() }, "✕"));
 
   function draw() {
-    dialog.replaceChildren(
+    setDialog(
       head(),
       slideView(deck[index], index),
       el("div", { class: "controls" },
@@ -121,7 +123,7 @@
   }
 
   function drawMessage(text, retry) {
-    dialog.replaceChildren(head(), el("p", { class: retry ? "" : "making" }, text),
+    setDialog(head(), el("p", { class: retry ? "" : "making" }, text),
       retry ? el("button", { class: "primary", onclick: () => remake() }, "Try again") : null);
   }
 
