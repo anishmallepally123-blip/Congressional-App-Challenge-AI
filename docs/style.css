@@ -238,6 +238,7 @@ body.demo { height: 100dvh; display: flex; flex-direction: column; }
 .thinking { color: var(--muted); font-size: 0.9rem; margin-bottom: 10px; }
 .thinking summary { cursor: pointer; }
 .thinking div { white-space: pre-wrap; border-left: 2px solid var(--border); padding-left: 12px; margin-top: 6px; }
+.bubble .note { color: var(--muted); font-size: 0.88rem; font-style: italic; margin: 8px 0 0; }
 .cursor::after { content: "▍"; animation: blink 1s steps(1) infinite; color: var(--muted); }
 @keyframes blink { 50% { opacity: 0; } }
 
