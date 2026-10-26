@@ -85,6 +85,62 @@ async function copyText(button, text) {
   } catch { toast("Couldn't copy. Select the text and press Ctrl+C instead."); }
 }
 
+// ---------- Reading answers out loud ----------
+// Uses the voices built into Windows, macOS, Android and iOS (on-device voices are
+// preferred over online ones). Code blocks are skipped because they sound like gibberish read aloud.
+
+const canSpeak = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+let speaking = null; // { content, button } for the answer being read out loud
+
+function speakableText(markdown) {
+  const box = document.createElement("div");
+  box.innerHTML = renderMarkdown(markdown);
+  box.querySelectorAll("pre").forEach((pre) => pre.replaceWith(" (code example) "));
+  return box.textContent.replace(/\s+/g, " ").trim();
+}
+
+function pickVoice() {
+  const voices = speechSynthesis.getVoices();
+  const lang = (navigator.language || "en").toLowerCase();
+  const local = voices.filter((v) => v.localService);
+  const pool = local.length ? local : voices;
+  return pool.find((v) => v.lang.toLowerCase() === lang)
+    || pool.find((v) => v.lang.toLowerCase().startsWith(lang.split("-")[0]))
+    || pool.find((v) => v.default) || null;
+}
+
+function stopSpeaking() {
+  if (!canSpeak || !speaking) return;
+  const { button } = speaking;
+  speaking = null;
+  button.textContent = "🔊 Listen";
+  speechSynthesis.cancel();
+}
+
+// Chats are redrawn often, so the Listen button for the answer being read is a new element each time.
+function listenButton(content) {
+  const button = el("button", { title: "Read this answer out loud" }, speaking?.content === content ? "⏹ Stop" : "🔊 Listen");
+  if (speaking?.content === content) speaking.button = button;
+  button.onclick = () => toggleSpeak(button, content);
+  return button;
+}
+
+function toggleSpeak(button, markdown) {
+  const wasThis = speaking?.content === markdown;
+  stopSpeaking();
+  if (wasThis) return;
+  const text = speakableText(markdown);
+  if (!text) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  const voice = pickVoice();
+  if (voice) { utterance.voice = voice; utterance.lang = voice.lang; }
+  const mine = { content: markdown, button };
+  utterance.onend = utterance.onerror = () => { if (speaking === mine) stopSpeaking(); };
+  speaking = mine;
+  button.textContent = "⏹ Stop";
+  try { speechSynthesis.speak(utterance); } catch { stopSpeaking(); toast("This browser can't read answers out loud."); }
+}
+
 // Read a response that sends one JSON object per line.
 async function readLines(resp, onEvent) {
   const reader = resp.body.getReader();
@@ -635,6 +691,7 @@ function messageEl(m, index, chat) {
     content.innerHTML = renderMarkdown(m.content);
     wrap.append(content, el("div", { class: "actions" },
       el("button", { onclick: (e) => copyText(e.target, m.content) }, "Copy"),
+      canSpeak && m.content ? listenButton(m.content) : null,
       isLast ? el("button", { onclick: regenerate, title: "Ask again for a different answer" }, "↻ Retry") : null,
       isPhone ? null : el("button", { onclick: (e) => saveExample(e.target, chat, index),
         title: "Save this question and answer so the AI answers more like this from now on" }, "👍 Teach"),
@@ -698,6 +755,7 @@ function errorEl(message, actions) {
 
 function newChat() {
   if (controller) return;
+  stopSpeaking();
   currentId = null;
   renderSidebar();
   renderMain();
@@ -707,6 +765,7 @@ function newChat() {
 
 function openChat(id) {
   if (controller) return toast("Wait for the answer to finish, or press Stop.");
+  stopSpeaking();
   currentId = id;
   renderSidebar();
   renderMain();
@@ -764,7 +823,7 @@ function deleteChat(id) {
   if (!confirm("Delete this chat?")) return;
   chats = chats.filter((c) => c.id !== id);
   saveChats();
-  if (currentId === id) currentId = null;
+  if (currentId === id) { stopSpeaking(); currentId = null; }
   renderSidebar();
   renderMain();
 }
