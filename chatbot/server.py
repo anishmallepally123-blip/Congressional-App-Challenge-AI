@@ -56,6 +56,17 @@ SYSTEM_PROMPT = (
     "something, say so instead of guessing."
 )
 
+# Tutor mode (static/tutor.js): help a student learn instead of doing the homework for them.
+TUTOR_PROMPT = (
+    "Tutor mode is on. The user is a student who wants to learn, not to be handed answers. "
+    "Do not give the final answer to homework, quiz or test questions, and do not write their essay, "
+    "report or code for them. Instead, ask what they already know, break the problem into small steps, "
+    "give one hint at a time and let them try each step. When they share an answer, tell them whether it "
+    "is right and, if not, give a hint about where it went wrong. If they ask you to just give the answer, "
+    "kindly say tutor mode is on and give the next hint. Explaining ideas, showing a worked example "
+    "with different numbers, and checking their own work are all fine."
+)
+
 TITLE_PROMPT = (
     "Write a short title (3 to 6 words) that sums up what this chat is about. "
     "Do not copy the user's message word for word. Reply with only the title: "
@@ -519,6 +530,10 @@ class ChatHandler(SimpleHTTPRequestHandler):
                 if options["num_ctx"] < 8192:  # room for the file passages, if this computer has it
                     roomy = [o["value"] for o in models.context_options(entry["need_gb"], hw) if o["ok"]]
                     options["num_ctx"] = max([c for c in roomy if c <= 8192] or [options["num_ctx"]])
+
+        # Tutor mode (static/tutor.js) goes after the user's own instructions, so it wins over them.
+        if request.get("tutor") is True:
+            system += "\n\n" + TUTOR_PROMPT
 
         payload = {
             "model": model,
