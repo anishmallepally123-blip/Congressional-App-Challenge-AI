@@ -89,6 +89,10 @@ class SharedFilesTests(unittest.TestCase):
         self.assertTrue(shared_files.search("essay about Roosevelt")[0]["file"].endswith("Untitled 3.docx"))
         self.assertTrue(shared_files.search("chess club room")[0]["file"].endswith("Club/meeting notes.txt"))
 
+    def test_plural_and_singular_words_match(self):
+        for plural, single in [("notes", "note"), ("grades", "grade"), ("essays", "essay"), ("classes", "class")]:
+            self.assertEqual(shared_files._tokens(plural), shared_files._tokens(single))
+
     def test_context_names_its_sources(self):
         shared_files.share(self.root)
         context, sources = shared_files.context_for([{"role": "user", "content": "How much was the robotics kit?"}])

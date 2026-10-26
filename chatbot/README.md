@@ -12,6 +12,7 @@ A Claude-style chatbot that runs entirely on your own computer. The AI model run
 - Adjustable settings for each model, saved separately per model: creativity, answer length, conversation memory (sizes too big for the computer are locked), and custom instructions
 - Replies stream in word by word, with an optional "Think deeper" mode that shows the AI's reasoning
 - Chat history saved in your browser, grouped by day, with search, rename and delete
+- One-tap follow-ups under the latest answer: Simpler, Shorter, More detail, or Quiz me
 - Edit a message you sent, retry an answer, and copy answers or code with one click
 - Formatted answers: headings, lists, tables and code blocks
 - Settings for text size and light or dark mode, and a layout that works on phones and narrow windows
