@@ -969,8 +969,24 @@ document.addEventListener("keydown", (e) => {
 
 // ---------- Start ----------
 
+// The start-up page shows once each time LoAI is opened (sessionStorage clears when the tab closes).
+function showSplash() {
+  try { if (sessionStorage.getItem("loai-started")) return false; } catch {}
+  $("splash").hidden = false;
+  $("splash-start").focus({ focusVisible: false }); // Enter starts; no ring on the cover look
+  return true;
+}
+
+function closeSplash() {
+  try { sessionStorage.setItem("loai-started", "1"); } catch {}
+  $("splash").classList.add("leaving");
+  setTimeout(() => { $("splash").hidden = true; inputEl.focus(); }, 250);
+}
+
+$("splash-start").addEventListener("click", closeSplash);
+
 applySettings();
 renderSidebar();
 renderMain();
 checkStatus();
-inputEl.focus();
+if (!showSplash()) inputEl.focus();
