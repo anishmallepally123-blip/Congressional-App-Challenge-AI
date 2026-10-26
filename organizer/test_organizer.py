@@ -114,5 +114,46 @@ class OrganizerTests(unittest.TestCase):
             organizer.get_plan("../../etc/passwd")
 
 
+
+class DuplicateTests(unittest.TestCase):
+    def setUp(self):
+        self.root = os.path.realpath(tempfile.mkdtemp())
+        files = {
+            "essay.docx": "final essay", "essay (1).docx": "final essay", "essay copy.docx": "final essay",
+            "photo.jpg": "pixels", "IMG_2041.jpg": "pixels", "notes.txt": "different text",
+            "draft.txt": "differ text!!", "empty1.txt": "", "empty2.txt": "",
+        }
+        for name, text in files.items():
+            with open(os.path.join(self.root, name), "w") as f:
+                f.write(text)
+        # notes.txt and draft.txt are the same size but not the same, so they stay put
+        old = os.path.join(self.root, "IMG_2041.jpg")
+        os.utime(old, (1_000_000_000, 1_000_000_000))  # the older photo is the one kept
+
+    def test_extra_copies_move_aside_and_undo_puts_them_back(self):
+        before = listing(self.root)
+        plan = organizer.duplicates_plan(self.root)
+        tos = {m["from"]: m["to"] for m in plan["moves"]}
+        self.assertEqual(tos, {
+            "essay (1).docx": "Duplicates/essay (1).docx",
+            "essay copy.docx": "Duplicates/essay copy.docx",
+            "photo.jpg": "Duplicates/photo.jpg",
+        })
+        self.assertIn("Same as essay.docx", plan["moves"][0]["reason"] + plan["moves"][1]["reason"])
+        self.assertIn("Found 3 duplicate files", plan["summary"])
+        run = organizer.apply_plan(plan["id"])
+        self.assertIn("Duplicates/photo.jpg", listing(self.root))
+        self.assertIn("IMG_2041.jpg", listing(self.root))
+        organizer.undo_run(run["id"])
+        self.assertEqual(listing(self.root), before)
+
+    def test_no_duplicates(self):
+        for name in ("essay (1).docx", "essay copy.docx", "photo.jpg"):
+            os.remove(os.path.join(self.root, name))
+        plan = organizer.duplicates_plan(self.root)
+        self.assertEqual(plan["moves"], [])
+        self.assertEqual(plan["summary"], "No duplicate files found.")
+
+
 if __name__ == "__main__":
     unittest.main()
