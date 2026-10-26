@@ -9,6 +9,30 @@
   <link rel="stylesheet" href="/connectors/tool-chat.css">
 </head>
 <body>
+  <!-- Start-up page: shown once each time LoAI opens -->
+  <section id="splash" aria-labelledby="splash-title" hidden>
+    <div class="splash-text">
+      <div class="splash-logo" aria-hidden="true"></div>
+      <h1 id="splash-title">LoAI</h1>
+      <p class="splash-tagline">Your own AI, running right on your computer.</p>
+      <ul class="splash-points">
+        <li><span aria-hidden="true">🔒</span> Private: your chats never leave this computer</li>
+        <li><span aria-hidden="true">📶</span> Works offline, no account needed</li>
+        <li><span aria-hidden="true">💸</span> Free to use, with models picked for your computer</li>
+      </ul>
+      <button id="splash-start" class="primary">Start chatting <span aria-hidden="true">→</span></button>
+    </div>
+    <div class="splash-preview" aria-hidden="true">
+      <div class="preview-bar"><i></i><i></i><i></i><span>LoAI</span></div>
+      <div class="preview-user">Can you make me a study plan for my algebra test on Friday?</div>
+      <div class="preview-ai">
+        <p>Sure! Here's a plan that fits in about an hour a day:</p>
+        <p><b>Mon</b> Linear equations<br><b>Tue</b> Graphing lines<br><b>Wed</b> Systems of equations<br><b>Thu</b> Practice test<br><b>Fri</b> Light review, then rest</p>
+      </div>
+      <div class="preview-input">Ask anything...<b>↑</b></div>
+      <div class="preview-badge">● Running on this computer</div>
+    </div>
+  </section>
   <aside id="sidebar" aria-label="Chats">
     <div class="brand">LoAI</div>
     <button id="new-chat" class="primary" title="Start a new chat (Ctrl+Shift+O)">＋ New chat</button>
