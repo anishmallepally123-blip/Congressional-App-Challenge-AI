@@ -472,7 +472,7 @@ function renderSidebar() {
   const query = $("search").value.trim().toLowerCase();
   list.innerHTML = "";
   const shown = [...chats]
-    .sort((a, b) => b.updated - a.updated)
+    .sort((a, b) => Boolean(b.pinned) - Boolean(a.pinned) || b.updated - a.updated)
     .filter((c) => !query || c.title.toLowerCase().includes(query) || c.messages.some((m) => m.content.toLowerCase().includes(query)));
   if (!shown.length) {
     list.append(el("li", { class: "empty" }, query ? "No chats match your search." : "Your chats will show up here."));
@@ -480,13 +480,25 @@ function renderSidebar() {
   }
   let group = null;
   for (const chat of shown) {
-    const g = dayGroup(chat.updated);
+    const g = chat.pinned ? "Pinned" : dayGroup(chat.updated);
     if (g !== group) list.append(el("li", { class: "group" }, (group = g)));
     list.append(el("li", { class: `chat${chat.id === currentId ? " active" : ""}`, onclick: () => openChat(chat.id) },
       el("span", { title: chat.title }, chat.title),
+      el("button", { class: chat.pinned ? "pin on" : "pin", title: chat.pinned ? "Unpin" : "Pin to the top",
+        "aria-label": chat.pinned ? "Unpin chat" : "Pin chat", "aria-pressed": String(Boolean(chat.pinned)),
+        onclick: (e) => { e.stopPropagation(); togglePin(chat); } }, "📌"),
       el("button", { title: "Rename", "aria-label": "Rename chat", onclick: (e) => { e.stopPropagation(); renameChat(chat); } }, "✎"),
       el("button", { title: "Delete", "aria-label": "Delete chat", onclick: (e) => { e.stopPropagation(); deleteChat(chat.id); } }, "🗑")));
   }
+}
+
+// Pinned chats stay at the top of the list, above Today, until they're unpinned.
+function togglePin(chat) {
+  if (chat.pinned) delete chat.pinned;
+  else chat.pinned = true;
+  saveChats();
+  renderSidebar();
+  toast(chat.pinned ? "Pinned to the top." : "Unpinned.");
 }
 
 $("search").addEventListener("input", renderSidebar);
