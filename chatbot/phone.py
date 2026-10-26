@@ -104,9 +104,11 @@ def restore(handler_class, port):
 
 def status(port):
     ip = _state["ip"]
+    url = f"http://{ip}:{port}" if _state["enabled"] and ip else None
     return {
         "enabled": _state["enabled"],
-        "url": f"http://{ip}:{port}" if _state["enabled"] and ip else None,
+        "url": url,
+        "pair_url": f"{url}/?code={_state['code']}" if url and _state["code"] else None,  # in the QR code
         "code": _state["code"] if _state["enabled"] else None,
         "phones": len(_state["tokens"]),
         "error": _state["error"],

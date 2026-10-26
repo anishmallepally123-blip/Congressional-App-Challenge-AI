@@ -25,6 +25,7 @@ import hardware
 import models
 import personal
 import phone
+import qr
 import router
 import tinygpt
 
@@ -187,6 +188,8 @@ class ChatHandler(SimpleHTTPRequestHandler):
                   "/api/personal/export": self.personal_export}
         if self.path in routes:
             return routes[self.path]()
+        if self.path.split("?")[0] == "/api/phone/qr":
+            return self.phone_qr()
         if self.path in ("/personal", "/personal/"):
             self.path = "/personal.html"
         return super().do_GET()
@@ -230,6 +233,19 @@ class ChatHandler(SimpleHTTPRequestHandler):
 
     def phone_status(self):
         self.send_json(200, phone.status(PORT))
+
+    def phone_qr(self):
+        """A QR code a phone's camera can scan to open the app and connect, code included."""
+        link = phone.status(PORT)["pair_url"]
+        if not link:
+            return self.send_json(404, {"error": "Turn on phone access first."})
+        body = qr.svg(link).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "image/svg+xml")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def phone_toggle(self, request):
         if request.get("enabled"):
