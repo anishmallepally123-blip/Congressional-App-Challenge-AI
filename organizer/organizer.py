@@ -274,6 +274,7 @@ def make_plan(path, model=None, request=""):
         "summary": str(raw.get("summary", ""))[:300],
         "note": note,
         "moves": moves,
+        "total_files": len(files),
         "skipped": skipped,
         "status": "pending",
     }

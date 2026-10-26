@@ -89,3 +89,15 @@ tr.off td:not(:first-child) { opacity: 0.45; text-decoration: line-through; }
 #folders li button { font-size: 13px; padding: 2px 10px; flex-shrink: 0; }
 #results { padding-left: 20px; margin: 8px 0 0; font-size: 14px; }
 #results li { margin-bottom: 8px; overflow-wrap: anywhere; }
+
+/* "After" preview of a plan */
+#preview { margin-top: 10px; }
+#preview h3 { font-size: 15px; margin: 0 0 6px; }
+#preview details { border-bottom: 1px solid var(--border); font-size: 14px; }
+#preview summary { display: flex; gap: 10px; align-items: center; padding: 5px 0; cursor: pointer; }
+#preview .staying summary { cursor: default; list-style: none; color: var(--muted); }
+#preview .name { flex: 0 0 38%; overflow-wrap: anywhere; }
+#preview .track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+#preview .bar { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+#preview .count { flex: 0 0 64px; text-align: right; color: var(--muted); }
+#preview ul { margin: 0 0 6px; padding-left: 28px; color: var(--muted); font-size: 13px; }

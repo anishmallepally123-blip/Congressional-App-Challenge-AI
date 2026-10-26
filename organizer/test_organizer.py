@@ -46,6 +46,11 @@ class OrganizerTests(unittest.TestCase):
         self.assertTrue(plan["moves"])
         self.assertEqual(listing(self.root), before)
 
+    def test_plan_counts_every_file_for_the_preview(self):
+        plan = organizer.make_plan(self.root)
+        self.assertEqual(plan["total_files"], 6)  # includes "mystery", which stays put
+        self.assertEqual(len(plan["moves"]), 5)
+
     def test_type_plan_apply_and_undo(self):
         before = listing(self.root)
         plan = organizer.make_plan(self.root)
