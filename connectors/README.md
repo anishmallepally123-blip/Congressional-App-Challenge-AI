@@ -13,6 +13,10 @@ Like the rest of the app, this uses only Python's standard library. There is not
 - **Paste a setup**: paste the `{"mcpServers": {...}}` block from any connector's instructions for Claude Desktop, Cursor or VS Code.
 - **Both kinds of connector**: a program on this computer (like `npx ...` or `uvx ...`), or a web address (remote, with an optional access token).
 - **You stay in control**: when the AI wants to use a tool, a card shows what it wants to do, with **Allow once**, **Always allow** and **Deny**. Each tool can be set to *Ask every time*, *Always allow* or *Don't use* on the Connectors page.
+- **Try it**: every tool has a **Try it** button on the Connectors page. It builds a small form from the tool's inputs and runs the tool for you, so you can check a connector works, and see exactly what the AI would get back, before asking the AI to use it.
+
+  ![Trying the Notes tools by hand](screenshot-try-it.png)
+
 - **Folder Organizer** shows up as a built-in connector, so you can say "tidy my Downloads folder" in the chat.
 - Chats remember tool cards, so they're still there when you reopen a chat.
 

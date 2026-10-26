@@ -408,6 +408,8 @@ class Manager:
                 "description": (t.get("description") or "").strip(),
                 "approval": cfg["approvals"].get(t["name"], "ask"),
                 "read_only": bool((t.get("annotations") or {}).get("readOnlyHint")),
+                "key": _tool_key(name, t["name"]),
+                "schema": t.get("inputSchema") or {},
             } for t in tools],
         }
 

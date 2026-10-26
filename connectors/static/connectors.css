@@ -61,7 +61,7 @@ button {
 }
 button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 button:disabled { opacity: 0.5; cursor: default; }
-input:not([type]), input[type=text], input[type=password], textarea, select {
+input:not([type]), input[type=text], input[type=password], input[type=number], textarea, select {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--border);
@@ -104,6 +104,12 @@ details[open] summary { margin-bottom: 6px; }
 }
 .tool-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border); }
 .tool-row > div { flex: 1; min-width: 0; }
+.try-btn { font-size: 13px; padding: 3px 10px; flex-shrink: 0; }
+.try-form { display: flex; flex-direction: column; gap: 4px; margin: 0 0 10px; padding: 10px 12px; background: var(--bg); border-radius: 10px; }
+.try-form label { margin: 4px 0 0; }
+.try-form input[type=checkbox] { align-self: flex-start; }
+.try-result { white-space: pre-wrap; font-size: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px; margin: 4px 0 0; max-height: 260px; overflow: auto; }
+.try-result.bad { color: var(--error); }
 
 /* On/off switch */
 .switch { position: relative; margin: 0; width: 38px; height: 22px; flex-shrink: 0; }

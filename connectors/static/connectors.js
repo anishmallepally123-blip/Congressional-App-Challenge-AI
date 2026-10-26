@@ -86,11 +86,99 @@ function toolRow(c, t) {
   for (const [value, label] of Object.entries(APPROVAL)) select.add(new Option(label, value));
   select.value = t.approval;
   select.onchange = () => act(() => api("/api/connectors/approval", { name: c.name, tool: t.name, approval: select.value }), false);
-  return el("div", { className: "tool-row" },
+  const tryBtn = el("button", { type: "button", className: "try-btn", textContent: "Try it" });
+  tryBtn.disabled = t.approval === "off";
+  tryBtn.title = tryBtn.disabled ? "Turned off. Choose another setting to try it." : "Run this tool yourself, without the AI";
+  const row = el("div", { className: "tool-row" },
     el("div", {},
       el("div", { textContent: t.title + (t.read_only ? "  (read only)" : "") }),
       el("div", { className: "muted small", textContent: t.description.split("\n")[0].slice(0, 200) })),
-    select);
+    tryBtn, select);
+  const wrap = el("div", {}, row);
+  tryBtn.onclick = () => {
+    const open = wrap.querySelector(".try-form");
+    if (open) open.remove();
+    else wrap.append(tryForm(c, t));
+  };
+  return wrap;
+}
+
+// ---------- Trying a tool by hand ----------
+
+// A small form built from the tool's input schema, so people can check a connector
+// works (and see what the AI would get back) before asking the AI to use it.
+function tryForm(c, t) {
+  const props = t.schema.properties || {};
+  const required = new Set(t.schema.required || []);
+  const form = el("form", { className: "try-form" });
+  const inputs = {};
+  for (const [name, spec] of Object.entries(props)) {
+    const id = `try-${t.key}-${name}`;
+    let input;
+    if (Array.isArray(spec.enum)) {
+      input = el("select", { id });
+      if (!required.has(name)) input.add(new Option("(not set)", ""));
+      for (const v of spec.enum) input.add(new Option(String(v), JSON.stringify(v)));
+    } else if (spec.type === "boolean") {
+      input = el("input", { id, type: "checkbox", checked: spec.default === true });
+    } else if (spec.type === "number" || spec.type === "integer") {
+      input = el("input", { id, type: "number", step: spec.type === "integer" ? "1" : "any" });
+      if (spec.default !== undefined) input.value = spec.default;
+    } else if (spec.type === "array" || spec.type === "object") {
+      input = el("textarea", { id, rows: 2, placeholder: spec.type === "array" ? '["one", "two"]' : '{"key": "value"}' });
+    } else {
+      input = el("input", { id });
+      if (spec.default !== undefined) input.value = spec.default;
+    }
+    input.required = required.has(name) && spec.type !== "boolean";
+    inputs[name] = { input, spec };
+    const hint = (spec.description || "").split("\n")[0].slice(0, 160);
+    form.append(
+      el("label", { htmlFor: id, textContent: name + (required.has(name) ? " *" : "") },
+        hint ? el("span", { className: "muted small", textContent: ` ${hint}` }) : null),
+      input);
+  }
+  if (!Object.keys(props).length) form.append(el("p", { className: "muted small", textContent: "This tool needs no input." }));
+
+  const run = el("button", { type: "submit", className: "primary", textContent: "Run" });
+  const note = el("span", { className: "muted small" });
+  const out = el("pre", { className: "try-result", hidden: true });
+  form.append(el("div", { className: "row" }, run, note), out);
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const args = {};
+    try {
+      for (const [name, { input, spec }] of Object.entries(inputs)) {
+        if (spec.type === "boolean") args[name] = input.checked;
+        else if (input.value === "") continue;
+        else if (input.tagName === "SELECT") args[name] = JSON.parse(input.value);
+        else if (spec.type === "number" || spec.type === "integer") args[name] = Number(input.value);
+        else if (spec.type === "array" || spec.type === "object") args[name] = JSON.parse(input.value);
+        else args[name] = input.value;
+      }
+    } catch {
+      note.textContent = "Lists and objects need to be written as JSON, like [\"a\", \"b\"].";
+      return;
+    }
+    if (!t.read_only && !confirm(`Run ${t.title} for real? It may change things in ${c.name}.`)) return;
+    run.disabled = true;
+    note.textContent = "Running...";
+    const started = performance.now();
+    try {
+      const result = await api("/api/tools/call", { name: t.key, arguments: args, model: localStorage.getItem("local-ai-model") });
+      note.textContent = `${result.is_error ? "The tool reported a problem" : "Done"} in ${((performance.now() - started) / 1000).toFixed(1)} s. This is what the AI would see:`;
+      out.textContent = result.text || "(no output)";
+      out.classList.toggle("bad", result.is_error);
+      out.hidden = false;
+      if (result.link) note.append(" ", el("a", { href: result.link, textContent: "Open" }));
+    } catch (err) {
+      note.textContent = err.message;
+    } finally {
+      run.disabled = false;
+    }
+  };
+  return form;
 }
 
 function describe(s) {
