@@ -185,6 +185,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
         routes = {"/api/status": self.status, "/api/system": self.system, "/api/models": self.list_models,
                   "/api/phone": self.phone_status, "/api/personal": self.personal_status,
                   "/api/personal/export": self.personal_export}
+        routes["/api/running"] = self.running
         if self.path in routes:
             return routes[self.path]()
         if self.path in ("/personal", "/personal/"):
@@ -201,6 +202,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
         routes = {"/api/chat": self.chat, "/api/title": self.title, "/api/pull": self.pull, "/api/delete": self.delete,
                   "/api/phone": self.phone_toggle, "/api/pair": self.pair}
         routes.update({f"/api/personal/{action}": self.personal_action for action in PERSONAL_ACTIONS})
+        routes["/api/unload"] = self.unload
         if self.path not in routes:
             return self.send_json(404, {"error": "Not found"})
         if not self.same_origin():
@@ -349,6 +351,35 @@ class ChatHandler(SimpleHTTPRequestHandler):
             self.send_json(404, {"error": "That model isn't installed."})
         except (urllib.error.URLError, OSError):
             self.send_json(503, {"error": "Ollama is not running."})
+
+    # ---------- Which models are in memory right now ----------
+
+    def running(self):
+        """The models Ollama has loaded, how much memory each uses, and how much of that is on the graphics card."""
+        try:
+            loaded = ollama_json("/api/ps", timeout=3).get("models", [])
+        except (urllib.error.URLError, OSError, ValueError):
+            return self.send_json(503, {"error": "Ollama is not running."})
+        out = []
+        for m in loaded:
+            size = m.get("size") or 0
+            vram = min(m.get("size_vram") or 0, size)
+            out.append({"name": m.get("name") or m.get("model", ""), "gb": round(size / 1e9, 1),
+                        "gpu_percent": round(100 * vram / size) if size else 0, "until": m.get("expires_at")})
+        self.send_json(200, {"models": out})
+
+    def unload(self, request):
+        """Free a model's memory now instead of waiting for Ollama to unload it after a few idle minutes."""
+        name = request.get("model")
+        if not isinstance(name, str) or not name:
+            return self.send_json(400, {"error": "Bad request"})
+        try:
+            ollama_json("/api/generate", {"model": name, "keep_alive": 0}, timeout=30)
+        except urllib.error.HTTPError:
+            return self.send_json(404, {"error": "That model isn't loaded."})
+        except (urllib.error.URLError, OSError, ValueError):
+            return self.send_json(503, {"error": "Ollama is not running."})
+        self.send_json(200, {"ok": True})
 
     # ---------- Personalize: profile, memory, examples and custom assistants ----------
 

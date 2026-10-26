@@ -409,6 +409,11 @@ dialog::backdrop { background: rgba(15, 14, 12, 0.42); backdrop-filter: blur(3px
   box-shadow: var(--shadow-sm);
 }
 .system-card .spec b { display: block; font-weight: 650; }
+.running-card { margin: 4px 0 14px; background: var(--card); padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; font-size: 0.9em; }
+.running-card p { margin: 6px 0 0; color: var(--muted); }
+.running-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+.running-row .name { font-weight: 600; }
+.running-row button { flex-shrink: 0; font-size: 0.85em; }
 .model-card {
   display: flex;
   gap: 12px;

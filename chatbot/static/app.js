@@ -275,6 +275,7 @@ function renderModels() {
   }
   if (isPhone) sys.append(el("p", { class: "note", style: "width:100%;margin:0" }, "These are the computer your phone is connected to. The AI runs there, so models are rated for it."));
   sys.append(...systemSummary(modelInfo.system));
+  renderRunning(sys);
   cards.append(el("h3", {}, "Chat models"));
   modelInfo.catalog.filter((m) => !m.coding).forEach((m) => cards.append(modelCard(m)));
   cards.append(el("h3", { id: "coding-models" }, "Coding models"),
@@ -292,6 +293,49 @@ function renderModels() {
     cards.append(el("h3", {}, "Other models you installed"));
     modelInfo.others.forEach((m) => cards.append(modelCard(m)));
   }
+}
+
+// "In memory now": which models Ollama has loaded, how big they are and whether they run on
+// the graphics card, with a button to free the memory for other apps (server.py running/unload).
+async function renderRunning(after) {
+  let box = $("running-card");
+  if (!box) {
+    box = el("div", { id: "running-card", class: "running-card" });
+    after.after(box);
+  }
+  let loaded;
+  try {
+    const resp = await fetch("/api/running");
+    if (!resp.ok) throw new Error();
+    loaded = (await resp.json()).models;
+  } catch {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  box.replaceChildren(el("b", {}, "🧠 In memory now"));
+  if (!loaded.length) {
+    box.append(el("p", {}, "No model is loaded. The next answer takes a few extra seconds while the model loads into memory."));
+    return;
+  }
+  for (const m of loaded) {
+    const where = m.gpu_percent >= 100 ? "all on the graphics card (fast)"
+      : m.gpu_percent > 0 ? `${m.gpu_percent}% on the graphics card, the rest in regular memory`
+      : "in regular memory, run by the processor";
+    const free = el("button", { onclick: async () => {
+      free.disabled = true;
+      free.textContent = "Freeing...";
+      const resp = await fetch("/api/unload", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: m.name }) }).catch(() => null);
+      if (!resp?.ok) toast("Couldn't free the memory. Is Ollama still running?");
+      renderRunning(after);
+    } }, "Free memory");
+    box.append(el("div", { class: "running-row" },
+      el("div", {}, el("span", { class: "name" }, findModel(m.name)?.label || m.name),
+        el("span", { class: "small" }, ` uses ${m.gb} GB, ${where}.`)),
+      free));
+  }
+  box.append(el("p", { class: "small" }, "Ollama frees it on its own after a few minutes without chatting. Free it now if another app needs the memory."));
 }
 
 async function openModels(section) {
