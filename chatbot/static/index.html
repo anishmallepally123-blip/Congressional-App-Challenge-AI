@@ -42,8 +42,13 @@
 
     <div id="composer-wrap">
       <form id="composer">
+        <div id="attachments" hidden></div>
         <textarea id="input" rows="1" placeholder="Ask anything..." aria-label="Message"></textarea>
         <div class="composer-row">
+          <button type="button" id="attach" class="icon" aria-label="Attach a text file"
+            title="Attach a text file (notes, an essay, code, a CSV) for the AI to read. It stays on this computer.">📎</button>
+          <input type="file" id="file-input" multiple hidden
+            accept=".txt,.md,.csv,.tsv,.json,.py,.js,.ts,.html,.css,.java,.c,.cpp,.h,.cs,.go,.rs,.rb,.php,.sql,.xml,.yaml,.yml,.ini,.log,.tex,text/*">
           <button type="button" id="think-toggle" class="chip" aria-pressed="false" hidden
             title="The AI thinks step by step before answering. Smarter, but slower.">💡 Think deeper</button>
           <span class="hint">Enter to send · Shift+Enter for a new line</span>

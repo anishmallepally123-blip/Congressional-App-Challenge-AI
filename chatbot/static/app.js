@@ -641,6 +641,7 @@ function messageEl(m, index, chat) {
       m.model ? el("span", { class: "model-tag" }, findModel(m.model)?.label || m.model) : null));
   } else {
     content.textContent = m.content;
+    if (m.files?.length) wrap.append(el("div", { class: "files" }, ...m.files.map((f) => fileChip(f))));
     wrap.append(content, el("div", { class: "actions", style: "justify-content:flex-end" },
       el("button", { onclick: (e) => copyText(e.target, m.content) }, "Copy"),
       el("button", { onclick: () => editMessage(index), title: "Change this message and ask again" }, "✎ Edit")));
@@ -773,6 +774,8 @@ function editMessage(index) {
   if (controller) return;
   const chat = currentChat();
   inputEl.value = chat.messages[index].content;
+  pending = chat.messages[index].files || [];
+  renderAttachments();
   chat.messages = chat.messages.slice(0, index);
   saveChats();
   renderMain();
@@ -782,11 +785,13 @@ function editMessage(index) {
 
 // ---------- Sending and streaming ----------
 
-async function send(text) {
+async function send(text, files = []) {
   if (!ollamaUp || !modelInfo?.models.includes(currentModel())) {
     currentId = null;
     renderMain();
     inputEl.value = text;
+    pending = files;
+    renderAttachments();
     toast(ollamaUp ? "Download a model first, then send your message." : "Start Ollama first, then send your message.");
     return;
   }
@@ -796,7 +801,7 @@ async function send(text) {
     chats.push(chat);
     currentId = chat.id;
   }
-  chat.messages.push({ role: "user", content: text });
+  chat.messages.push({ role: "user", content: text, ...(files.length ? { files } : {}) });
   chat.updated = Date.now();
   saveChats();
   renderSidebar();
@@ -934,15 +939,92 @@ function setBusy(busy) {
   if (!busy) inputEl.focus();
 }
 
+// ---------- Attaching text files ----------
+// The file is read here in the browser and sent with the message to this computer's
+// AI (server.py adds it to the message). Nothing is uploaded anywhere else.
+
+const FILE_CHARS = 20000; // the same limit as server.py, so the model still has room to answer
+const MAX_FILES = 3;
+let pending = []; // files attached to the message being typed: [{ name, text }]
+
+function fileChip(file, onRemove) {
+  return el("span", { class: "file-chip", title: `${file.name} (${file.text.length.toLocaleString()} characters)` },
+    el("span", {}, "📄 " + file.name),
+    onRemove ? el("button", { type: "button", onclick: onRemove, "aria-label": `Remove ${file.name}` }, "✕") : null);
+}
+
+function renderAttachments() {
+  const box = $("attachments");
+  box.replaceChildren(...pending.map((f, i) => fileChip(f, () => {
+    pending.splice(i, 1);
+    renderAttachments();
+    inputEl.focus();
+  })));
+  box.hidden = !pending.length;
+}
+
+async function addFiles(list) {
+  for (const file of list) {
+    if (pending.length >= MAX_FILES) { toast(`You can attach up to ${MAX_FILES} files to one message.`); break; }
+    if (file.size > 5_000_000) { toast(`${file.name} is too big. Attach a text file under 5 MB.`); continue; }
+    let text;
+    try { text = await file.text(); }
+    catch { toast(`Couldn't open ${file.name}.`); continue; }
+    if (text.includes("\u0000") || text.includes("\uFFFD\uFFFD")) {
+      toast(`${file.name} isn't a text file. Try a .txt, .md, .csv or code file. For a Word doc or PDF, copy the text in.`);
+      continue;
+    }
+    if (!text.trim()) { toast(`${file.name} is empty.`); continue; }
+    if (text.length > FILE_CHARS) {
+      text = text.slice(0, FILE_CHARS);
+      toast(`${file.name} is long, so the AI will read the first ${FILE_CHARS.toLocaleString()} characters.`);
+    }
+    pending.push({ name: file.name, text });
+  }
+  renderAttachments();
+  inputEl.focus();
+}
+
+$("attach").addEventListener("click", () => $("file-input").click());
+$("file-input").addEventListener("change", (e) => {
+  addFiles([...e.target.files]);
+  e.target.value = ""; // so picking the same file again still works
+});
+
+// Drag a file onto the message box, or paste one.
+const composer = $("composer");
+composer.addEventListener("dragover", (e) => {
+  if (![...e.dataTransfer.types].includes("Files")) return;
+  e.preventDefault();
+  composer.classList.add("dropping");
+});
+composer.addEventListener("dragleave", () => composer.classList.remove("dropping"));
+composer.addEventListener("drop", (e) => {
+  composer.classList.remove("dropping");
+  if (!e.dataTransfer.files.length) return;
+  e.preventDefault();
+  addFiles([...e.dataTransfer.files]);
+});
+inputEl.addEventListener("paste", (e) => {
+  const files = [...(e.clipboardData?.files || [])];
+  if (!files.length) return;
+  e.preventDefault();
+  addFiles(files);
+});
+
 // ---------- Input box ----------
 
 $("composer").addEventListener("submit", (e) => {
   e.preventDefault();
-  const text = inputEl.value.trim();
-  if (!text || controller) return;
+  let text = inputEl.value.trim();
+  if ((!text && !pending.length) || controller) return;
+  if (!text) text = pending.length > 1 ? "Summarize these files." : "Summarize this file.";
+  const files = pending;
+  pending = [];
+  renderAttachments();
   inputEl.value = "";
   autoResize();
-  send(text);
+  send(text, files);
 });
 
 // Enter sends, Shift+Enter makes a new line

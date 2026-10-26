@@ -370,6 +370,14 @@ details.thinking .thought { white-space: pre-wrap; border-left: 2px solid var(--
   padding: 0 4px 0 0;
 }
 #input::placeholder { color: var(--faint); }
+#attachments { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.file-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8em; padding: 4px 6px 4px 10px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--panel); color: var(--muted); max-width: 100%; }
+.file-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-chip button { border: none; background: none; padding: 0 4px; color: var(--faint); }
+.file-chip button:hover { color: var(--text); }
+.msg.user .files { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; margin-bottom: 6px; }
+#composer.dropping { border-color: var(--accent); box-shadow: var(--shadow-md), 0 0 0 3px var(--glow); }
 .composer-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .hint { flex: 1; font-size: 0.72em; color: var(--faint); }
 .chip { font-size: 0.78em; padding: 4px 11px; border-radius: 999px; border-color: var(--border); color: var(--muted); }
