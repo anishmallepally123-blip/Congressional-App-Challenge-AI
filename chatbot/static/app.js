@@ -625,17 +625,53 @@ function switchBanner(model, reason) {
   return el("div", { class: "switch-banner" }, el("b", {}, `🧑‍💻 ${label} is answering. `), reason);
 }
 
+function compareBanner(model) {
+  const label = findModel(model)?.label || model;
+  return el("div", { class: "switch-banner compare-banner" }, el("b", {}, `⇄ Second opinion from ${label}. `),
+    "Same question, different model. The chat continues from the first answer.");
+}
+
+// Ask the same question to another installed model, to see how their answers differ.
+function compareButton(m) {
+  const others = (modelInfo?.models || []).filter((name) => name !== m.model);
+  if (!others.length) return null;
+  return el("button", { title: "Ask another model the same question", onclick: (e) => {
+    const actions = e.target.closest(".actions");
+    const open = actions.nextElementSibling?.classList.contains("compare-pick");
+    if (open) return actions.nextElementSibling.remove();
+    actions.after(el("div", { class: "compare-pick" }, el("span", {}, "Compare with:"),
+      ...others.map((name) => el("button", { class: "chip", onclick: () => compareWith(name) }, findModel(name)?.label || name))));
+  } }, "⇄ Compare");
+}
+
+function compareWith(model) {
+  const chat = currentChat();
+  if (!chat || controller) return;
+  renderMain();
+  streamReply(chat, { model, compare: true });
+}
+
+// What the model sees: second-opinion answers are left out, and a second opinion
+// sees the conversation only up to the question, not the first answer.
+function historyFor(chat, compare) {
+  const kept = chat.messages.filter((m) => !m.compare);
+  if (!compare) return kept;
+  return kept.slice(0, kept.findLastIndex((m) => m.role === "user") + 1);
+}
+
 function messageEl(m, index, chat) {
   const isLast = index === chat.messages.length - 1;
   const content = el("div", { class: "content" });
   const wrap = el("div", { class: `msg ${m.role}` });
   if (m.role === "assistant") {
+    if (m.compare) wrap.append(compareBanner(m.model));
     if (m.switched) wrap.append(switchBanner(m.model, m.switched));
     if (m.thinking) wrap.append(thinkingBlock(m.thinking, m.thinkSeconds, false));
     content.innerHTML = renderMarkdown(m.content);
     wrap.append(content, el("div", { class: "actions" },
       el("button", { onclick: (e) => copyText(e.target, m.content) }, "Copy"),
       isLast ? el("button", { onclick: regenerate, title: "Ask again for a different answer" }, "↻ Retry") : null,
+      isLast ? compareButton(m) : null,
       isPhone ? null : el("button", { onclick: (e) => saveExample(e.target, chat, index),
         title: "Save this question and answer so the AI answers more like this from now on" }, "👍 Teach"),
       m.model ? el("span", { class: "model-tag" }, findModel(m.model)?.label || m.model) : null));
@@ -804,12 +840,13 @@ async function send(text) {
   await streamReply(chat);
 }
 
-async function streamReply(chat) {
-  let model = currentModel(); // the server may switch to a coding model; it says which
+async function streamReply(chat, opts = {}) {
+  let model = opts.model || currentModel(); // the server may switch to a coding model; it says which
   let switched = null;
   const wrap = el("div", { class: "msg assistant" });
   const body = el("div", { class: "content" }, el("span", { class: "typing", "aria-label": "Thinking" }, el("i"), el("i"), el("i")));
   wrap.append(body);
+  if (opts.compare) wrap.prepend(compareBanner(model));
   messagesEl.append(wrap);
   scrollToBottom();
   setBusy(true);
@@ -830,8 +867,8 @@ async function streamReply(chat) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model, messages: chat.messages, think: settings.think,
-        auto_code: settings.autoCode === "on", settings_by_model: modelSettings,
+        model, messages: historyFor(chat, opts.compare), think: settings.think,
+        auto_code: settings.autoCode === "on" && !opts.compare, settings_by_model: modelSettings,
       }),
       signal: controller.signal,
     });
@@ -873,7 +910,7 @@ async function streamReply(chat) {
       });
     }
     // The model wants to use connectors: ask the user, run the tools, then let it continue.
-    if (toolCalls && !failure) {
+    if (toolCalls && !failure && !opts.compare) {
       body.innerHTML = renderMarkdown(reply);
       const signal = controller.signal;
       const ran = await ToolChat.runCalls({ calls: toolCalls, chat, model, text: reply, wrap, body, signal, save: saveChats });
@@ -893,6 +930,7 @@ async function streamReply(chat) {
     if (thinkSeconds == null && thinking) thinkSeconds = Math.max(1, Math.round((Date.now() - thinkStart) / 1000));
     chat.messages.push({ role: "assistant", content: reply, model, ...(switched ? { switched } : {}), ...(thinking ? { thinking, thinkSeconds } : {}) });
     chat.updated = Date.now();
+    if (opts.compare) chat.messages.at(-1).compare = true; // a second opinion (compareWith)
     saveChats();
     if (chat.autoTitle && chat.messages.length === 2) nameChat(chat, model);
   }
@@ -907,7 +945,7 @@ async function streamReply(chat) {
     scrollToBottom();
   }
   if (failure) {
-    const actions = [el("button", { onclick: regenerate }, "↻ Try again")];
+    const actions = [el("button", { onclick: opts.compare ? () => compareWith(opts.model) : regenerate }, "↻ Try again")];
     if (failure.status === 503) {
       ollamaUp = false;
       actions.push(el("button", { onclick: () => { currentId = null; renderSidebar(); renderMain(); } }, "Show setup steps"));
@@ -922,10 +960,11 @@ async function streamReply(chat) {
 function regenerate() {
   const chat = currentChat();
   if (!chat || controller) return;
-  if (chat.messages.at(-1)?.role === "assistant") chat.messages.pop();
+  const last = chat.messages.at(-1);
+  if (last?.role === "assistant") chat.messages.pop();
   saveChats();
   renderMain();
-  streamReply(chat);
+  streamReply(chat, last?.compare ? { model: last.model, compare: true } : {});
 }
 
 function setBusy(busy) {
