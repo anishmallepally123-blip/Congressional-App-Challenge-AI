@@ -90,10 +90,17 @@ def _nvidia_gpus():
 
 def _windows_gpus():
     """Other cards on Windows (AMD, Intel), read from the driver's registry entry."""
+    # Newer drivers store the card's memory as a 64-bit number (qwMemorySize). Older ones, and many
+    # AMD drivers, only have MemorySize, sometimes saved as raw bytes, so read whichever is there.
     script = (
-        "Get-ItemProperty 'HKLM:\\SYSTEM\\ControlSet001\\Control\\Class\\"
+        "Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\"
         "{4d36e968-e325-11ce-bfc1-08002be10318}\\0*' -ErrorAction SilentlyContinue | "
-        "ForEach-Object { $_.DriverDesc + '|' + $_.'HardwareInformation.qwMemorySize' }"
+        "ForEach-Object { "
+        "$m = $_.'HardwareInformation.qwMemorySize'; "
+        "if ($null -eq $m) { $m = $_.'HardwareInformation.MemorySize' }; "
+        "if ($m -is [byte[]]) { if ($m.Length -ge 8) { $m = [BitConverter]::ToUInt64($m, 0) } "
+        "elseif ($m.Length -ge 4) { $m = [BitConverter]::ToUInt32($m, 0) } else { $m = '' } }; "
+        "$_.DriverDesc + '|' + $m }"
     )
     out = _run(["powershell", "-NoProfile", "-Command", script], timeout=10)
     gpus = []

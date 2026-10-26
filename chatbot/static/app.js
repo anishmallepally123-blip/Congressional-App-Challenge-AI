@@ -213,9 +213,12 @@ function renderModelButton() {
 
 function systemSummary(hw) {
   const gpu = hw.gpus.find((g) => g.usable);
+  const other = hw.gpus[0]; // a card the AI can't use, like Intel's built-in graphics, is still worth naming
   const specs = [
     ["Memory (RAM)", hw.ram_gb ? gb(hw.ram_gb) : "Unknown"],
-    ["Graphics", gpu ? (gpu.shared ? `${gpu.name} (shared memory)` : `${gpu.name}, ${gb(gpu.vram_gb)}`) : "None the AI can use"],
+    gpu || !other
+      ? ["Graphics", gpu ? (gpu.shared ? `${gpu.name} (shared memory)` : `${gpu.name}, ${gb(gpu.vram_gb)}`) : "None the AI can use"]
+      : ["Graphics (the AI can't use it, so it runs on the processor)", other.name],
     ["Free disk space", hw.disk_free_gb != null ? gb(hw.disk_free_gb) : "Unknown"],
   ];
   return specs.map(([k, v]) => el("div", { class: "spec" }, el("b", {}, v), el("span", { class: "small" }, k)));
