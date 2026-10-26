@@ -83,6 +83,12 @@ Browser (static/)  <-->  server.py (port 8000)  <-->  Ollama (port 11434)  <--> 
 - `static/markdown.js` turns the model's Markdown into formatted text. It is built in so the app works offline, and it escapes HTML so a reply can't run code in the page.
 - The system prompt that sets the assistant's personality is at the top of `server.py`.
 
+## Backing up your chats
+
+Chats are saved only in your browser, so clearing the browser's data, or switching to another browser or computer, would lose them. **Settings → Back up your chats → Save a backup** saves every chat (and your model settings) to one `.json` file in Downloads. **Restore** adds the chats from a backup file back in. Chats that are already there are left alone, so restoring the same file twice doesn't make copies.
+
+![Back up your chats in Settings](screenshots/backup.png)
+
 ## Teaching the AI about you
 
 The models are downloaded unchanged from the companies that made them (Qwen from Alibaba, Gemma from Google, Llama from Meta). Open **🧠 Personalize** in the sidebar to teach yours without retraining it:
