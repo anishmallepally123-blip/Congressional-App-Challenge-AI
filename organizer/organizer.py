@@ -196,13 +196,31 @@ def _type_plan(scan):
     return {"summary": "Files sorted into folders by type.", "moves": moves}
 
 
+def _folder_names(scan, raw_moves):
+    """Names that mean a folder, lowercased, mapped to how they're spelled: existing
+    subfolders first, then folders other moves use, then the type folders."""
+    folders = {}
+    for name in scan.get("subfolders", []):
+        folders.setdefault(name.lower(), name)
+    for m in raw_moves:
+        dst = str(m.get("to", "")).strip().replace("\\", "/").rstrip("/")
+        while "/" in dst:
+            dst = dst.rsplit("/", 1)[0]
+            folders.setdefault(dst.lower(), dst)
+        if str(m.get("to", "")).strip().endswith("/") and dst:
+            folders.setdefault(dst.lower(), dst)
+    for name in CATEGORIES:
+        folders.setdefault(name.lower(), name)
+    return folders
+
+
 def _clean_moves(root, scan, raw_moves):
     """Keep only safe, sensible moves. Returns (moves, skipped notes)."""
     names = {f["name"] for f in scan["files"]}
+    raw_moves = [m for m in raw_moves if isinstance(m, dict)] if isinstance(raw_moves, list) else []
+    folders = _folder_names(scan, raw_moves)
     moves, skipped, used_from, used_to = [], [], set(), set()
-    for m in raw_moves if isinstance(raw_moves, list) else []:
-        if not isinstance(m, dict):
-            continue
+    for m in raw_moves:
         src, dst = str(m.get("from", "")).strip(), str(m.get("to", "")).strip().replace("\\", "/")
         reason = str(m.get("reason", "")).strip()[:200]
         if src not in names:
@@ -210,6 +228,10 @@ def _clean_moves(root, scan, raw_moves):
             continue
         if src in used_from:
             continue
+        # Small models often name just the folder ("Images" or "Images/"): keep the file's name.
+        folder = dst.rstrip("/")
+        if folder and (dst.endswith("/") or folder.lower() in folders):
+            dst = folders.get(folder.lower(), folder) + "/" + src
         if _inside(root, dst) is None:
             skipped.append(f"{src}: destination {dst or '(blank)'} is outside the folder")
             continue
@@ -258,10 +280,10 @@ def make_plan(path, model=None, request=""):
     if not isinstance(raw, dict):
         raw = _type_plan(scan)
         source = "type"
-    moves, skipped = _clean_moves(root, {"files": files}, raw.get("moves"))
+    moves, skipped = _clean_moves(root, {"files": files, "subfolders": scan["subfolders"]}, raw.get("moves"))
     if source == "model" and not moves:
         raw = _type_plan(scan)
-        moves, skipped = _clean_moves(root, {"files": files}, raw.get("moves"))
+        moves, skipped = _clean_moves(root, {"files": files, "subfolders": scan["subfolders"]}, raw.get("moves"))
         source = "type"
         note = (note + " The AI model's plan had no usable moves, so files were sorted by type instead.").strip()
 

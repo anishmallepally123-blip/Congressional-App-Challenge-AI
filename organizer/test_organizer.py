@@ -74,6 +74,22 @@ class OrganizerTests(unittest.TestCase):
         self.assertEqual(tos, {"budget.xlsx": "Money/budget.xlsx", "IMG_2041.jpg": "Photos/Beach day.jpg"})
         self.assertEqual(len(plan["skipped"]), 4)
 
+    def test_folder_only_destinations_keep_the_file_name(self):
+        os.mkdir(os.path.join(self.root, "Pictures"))
+        self.fake_model([
+            {"from": "IMG_2041.jpg", "to": "Pictures"},  # an existing folder
+            {"from": "essay.docx", "to": "School/"},  # a trailing slash
+            {"from": "notes.txt", "to": "school"},  # a folder another move uses
+            {"from": "song.mp3", "to": "Audio"},  # one of the type folders
+            {"from": "budget.xlsx", "to": "Monthly budget"},  # a plain rename still works
+        ])
+        plan = organizer.make_plan(self.root, model="fake")
+        tos = {m["from"]: m["to"] for m in plan["moves"]}
+        self.assertEqual(tos, {"IMG_2041.jpg": "Pictures/IMG_2041.jpg", "essay.docx": "School/essay.docx",
+                               "notes.txt": "School/notes.txt", "song.mp3": "Audio/song.mp3",
+                               "budget.xlsx": "Monthly budget.xlsx"})
+        self.assertEqual(plan["skipped"], [])
+
     def test_never_overwrites(self):
         os.mkdir(os.path.join(self.root, "Docs"))
         make_files(os.path.join(self.root, "Docs"), ["essay.docx"])
