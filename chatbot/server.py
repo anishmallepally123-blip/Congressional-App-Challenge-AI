@@ -83,6 +83,22 @@ def ollama_json(path, payload=None, timeout=10, method=None):
         return json.load(resp)
 
 
+def clean_messages(messages):
+    """
+    The chat's messages as Ollama expects them, or [] if there's nothing usable.
+    Saved chats can hold a message with no text (null), so that becomes "".
+    """
+    if not isinstance(messages, list):
+        return []
+    out = []
+    for m in messages:
+        if not isinstance(m, dict) or not isinstance(m.get("role"), str):
+            continue
+        content = m.get("content")
+        out.append(dict(m, content=content if isinstance(content, str) else ""))
+    return out
+
+
 def installed_models():
     """Map of installed model name -> size in bytes."""
     data = ollama_json("/api/tags", timeout=5)
@@ -116,8 +132,21 @@ class ChatHandler(SimpleHTTPRequestHandler):
         # Keep the terminal quiet except for errors.
         pass
 
+    def handle_one_request(self):
+        # A request the code didn't expect (say, a number where text should be) gets a clear error
+        # instead of a dropped connection, which the page would report as the server being closed.
+        self.responded = False
+        try:
+            super().handle_one_request()
+        except (TypeError, AttributeError, KeyError, IndexError, ValueError):
+            import traceback
+            traceback.print_exc()
+            if not self.responded:
+                self.send_json(400, {"error": "The app couldn't understand that request."})
+
     def send_json(self, status, payload):
         body = json.dumps(payload).encode("utf-8")
+        self.responded = True
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -165,6 +194,7 @@ class ChatHandler(SimpleHTTPRequestHandler):
         return False
 
     def start_stream(self):
+        self.responded = True
         self.send_response(200)
         self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
         self.send_header("Cache-Control", "no-cache")
@@ -454,8 +484,8 @@ class ChatHandler(SimpleHTTPRequestHandler):
     def chat(self, request):
         """Forward the conversation to Ollama and stream the reply back, one JSON event per line."""
         model = request.get("model")
-        messages = request.get("messages")
-        if not model or not isinstance(messages, list):
+        messages = clean_messages(request.get("messages"))
+        if not isinstance(model, str) or not model or not messages:
             return self.send_json(400, {"error": "Bad request"})
         if model == tinygpt.ENTRY["name"]:
             return self.chat_tinygpt(request, messages)
