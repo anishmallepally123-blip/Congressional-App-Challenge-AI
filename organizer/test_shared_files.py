@@ -72,6 +72,34 @@ class SharedFilesTests(unittest.TestCase):
         self.assertIn("due November 12", text("science fair.pdf"))
         self.assertEqual(text("photo.jpg"), "")
 
+    def test_excel_empty_cells_and_many_sheets(self):
+        # Excel writes empty cells and rows as <c .../> and <row/>. They used to swallow the next
+        # cell, so "Score" came out as its shared-text number "1". Sheets also sorted 1, 10, 2.
+        path = os.path.join(self.root, "grades.xlsx")
+        sheets = {f"xl/worksheets/sheet{i}.xml": f'<worksheet><sheetData><row><c><v>{i}</v></c></row></sheetData></worksheet>'
+                  for i in range(2, 11)}
+        write_zip(path, {
+            "xl/sharedStrings.xml": "<sst><si><t>Name</t></si><si><t>Score</t></si><si><t>Ana</t></si></sst>",
+            "xl/worksheets/sheet1.xml": '<worksheet><cols><col min="1" max="2"/></cols><sheetData>'
+                                        '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" s="2"/><c r="C1" t="s"><v>1</v></c></row>'
+                                        '<row r="2"/><row r="3"><c r="A3" t="s"><v>2</v></c><c r="C3"><v>91</v></c></row>'
+                                        '</sheetData></worksheet>',
+            **sheets,
+        })
+        text = shared_files.extract_text(path)
+        self.assertIn("Name | Score\nAna | 91", text)
+        order = [int(n) for n in __import__("re").findall(r"\[sheet(\d+)\]", text)]
+        self.assertEqual(order, list(range(1, 11)))
+
+    def test_word_line_breaks_and_tabs(self):
+        path = os.path.join(self.root, "letter.docx")
+        write_zip(path, {"word/document.xml": "<w:document><w:body><w:p><w:r><w:t>123 Main St</w:t><w:br/>"
+                                              "<w:t>Springfield</w:t></w:r></w:p><w:p><w:r><w:t>Name:</w:t><w:tab/>"
+                                              "<w:t>Ana</w:t></w:r></w:p></w:body></w:document>"})
+        text = shared_files.extract_text(path)
+        self.assertIn("123 Main St\nSpringfield", text)
+        self.assertIn("Name: Ana", text)
+
     def test_private_files_are_never_read(self):
         self.assertEqual(shared_files.extract_text(os.path.join(self.root, "passwords.txt")), "")
         shared_files.share(self.root)
