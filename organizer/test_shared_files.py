@@ -130,5 +130,31 @@ class SharedFilesTests(unittest.TestCase):
             organizer._ask_model = real
 
 
+
+class LongDocumentTests(unittest.TestCase):
+    def setUp(self):
+        self.root = os.path.realpath(tempfile.mkdtemp())
+        # A Word essay has no blank lines between paragraphs, so it reads as one long block.
+        paras = [f"Paragraph {i} is about the Roman empire and its provinces across Europe." for i in range(60)]
+        paras[50] = "For the science fair, the volcano needs baking soda, vinegar and red food colouring."
+        body = "".join(f"<w:p><w:r><w:t>{p}</w:t></w:r></w:p>" for p in paras)
+        write_zip(os.path.join(self.root, "notes.docx"), {"word/document.xml": f"<w:document><w:body>{body}</w:body></w:document>"})
+        shared_files.share(self.root)
+
+    def tearDown(self):
+        shared_files.unshare(self.root)
+
+    def test_text_late_in_a_long_document_can_be_found(self):
+        hits = shared_files.search("what does the volcano need")
+        self.assertTrue(hits)
+        self.assertIn("baking soda", hits[0]["text"])
+
+    def test_every_part_of_the_document_is_kept(self):
+        text = shared_files.extract_text(os.path.join(self.root, "notes.docx"))
+        pieces = list(shared_files._pieces(text))
+        self.assertTrue(all(len(p) <= 700 for p in pieces))
+        self.assertEqual("".join(text.split()), "".join("".join(pieces).split()))
+
+
 if __name__ == "__main__":
     unittest.main()
