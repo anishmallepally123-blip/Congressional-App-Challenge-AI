@@ -28,6 +28,7 @@ Like the rest of the app, this uses only Python's standard library. There is not
 | Wikipedia | Search and read articles | Internet |
 | Weather | Current weather and a 7-day forecast ([Open-Meteo](https://open-meteo.com), no account) | Internet |
 | Memory | Remember facts about you between chats (saved on this computer) | Nothing |
+| Calculator | Exact math and unit conversions, so small models don't make arithmetic mistakes | Nothing |
 | Google Drive folder, OneDrive, Dropbox, iCloud Drive | Read and search your cloud files through the copy their desktop app keeps on this computer. The page finds the folder when it can. | That service's desktop app |
 | Google Drive | Search and read Docs, Sheets (as CSV), Slides and text files online | A free Google Cloud sign-in client (below) |
 | Google Calendar | See upcoming events | A free Google Cloud sign-in client (below) |

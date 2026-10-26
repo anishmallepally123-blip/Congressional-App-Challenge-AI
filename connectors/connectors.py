@@ -112,6 +112,9 @@ def presets():
         {"name": "Memory", "group": ready, "needs": "Nothing extra. Works offline.",
          "about": "Let the AI remember facts about you between chats. Saved only on this computer.",
          "config": _py("memory_server.py")},
+        {"name": "Calculator", "group": ready, "needs": "Nothing extra. Works offline.",
+         "about": "Exact math and unit conversions, so the AI doesn't make arithmetic mistakes.",
+         "config": _py("calculator_server.py")},
     ]
     apps = {
         "Google Drive": "Google Drive for desktop (google.com/drive/download)",

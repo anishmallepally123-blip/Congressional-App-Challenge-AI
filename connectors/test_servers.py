@@ -147,6 +147,31 @@ class MemoryTests(ServerTestCase):
         self.assertTrue(self.call(conn, "forget", id=9)[1])
 
 
+class CalculatorTests(ServerTestCase):
+    def test_calculate(self):
+        conn = self.start("calculator_server.py")
+        self.assertEqual(self.tools(conn), {"calculate", "convert_units"})
+        self.assertEqual(self.call(conn, "calculate", expression="0.1 + 0.2")[0], "0.1 + 0.2 = 0.3")
+        self.assertEqual(self.call(conn, "calculate", expression="2^10 + sqrt(144)")[0], "2^10 + sqrt(144) = 1,036")
+        self.assertEqual(self.call(conn, "calculate", expression="47.83 * 18%")[0], "47.83 * 18% = 8.6094")
+        self.assertEqual(self.call(conn, "calculate", expression="15% of 80")[0], "15% of 80 = 12")
+        self.assertEqual(self.call(conn, "calculate", expression="10 % 3")[0], "10 % 3 = 1")
+        self.assertEqual(self.call(conn, "calculate", expression="round(2.567, 2)")[0], "round(2.567, 2) = 2.57")
+        self.assertEqual(self.call(conn, "calculate", expression="sin(30)")[0], "sin(30) = 0.5")
+
+    def test_calculate_refuses_anything_but_math(self):
+        conn = self.start("calculator_server.py")
+        for expression in ("__import__('os').getcwd()", "open('x')", "9**9**9", "1/0", "(1).real"):
+            text, is_error = self.call(conn, "calculate", expression=expression)
+            self.assertTrue(is_error, expression)
+
+    def test_convert_units(self):
+        conn = self.start("calculator_server.py")
+        self.assertEqual(self.call(conn, "convert_units", value=5, from_unit="miles", to_unit="km")[0], "5 miles = 8.04672 km")
+        self.assertEqual(self.call(conn, "convert_units", value=212, from_unit="°F", to_unit="Celsius")[0], "212 °F = 100 Celsius")
+        self.assertTrue(self.call(conn, "convert_units", value=1, from_unit="kg", to_unit="C")[1])
+
+
 class WebTests(ServerTestCase):
     def test_html_to_text(self):
         sys.path.insert(0, SERVERS)
