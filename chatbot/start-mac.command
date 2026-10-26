@@ -1,4 +1,4 @@
 #!/bin/bash
-# Double-click this file to start Local AI Chat on a Mac.
+# Double-click this file to start LoAI on a Mac.
 cd "$(dirname "$0")"
 python3 server.py

@@ -1,4 +1,4 @@
-# Builds LocalAIChat.zip and publishes it as a GitHub Release, either when a version tag
+# Builds LoAI.zip and publishes it as a GitHub Release, either when a version tag
 # (v1.0.0, ...) is pushed or when started by hand from the Actions tab with a version.
 name: Release
 
@@ -20,22 +20,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build LocalAIChat.zip
+      - name: Build LoAI.zip
         run: |
-          mkdir -p "build/Local AI Chat"
+          mkdir -p "build/LoAI"
           cp -r chatbot organizer connectors launcher README.md "QUICK START.txt" \
-            "Start Local AI Chat - Windows.bat" "Start Local AI Chat - Mac.command" "build/Local AI Chat/"
-          chmod +x "build/Local AI Chat/Start Local AI Chat - Mac.command" "build/Local AI Chat/chatbot/start-mac.command"
+            "Start LoAI - Windows.bat" "Start LoAI - Mac.command" "build/LoAI/"
+          chmod +x "build/LoAI/Start LoAI - Mac.command" "build/LoAI/chatbot/start-mac.command"
           find build -name __pycache__ -prune -exec rm -rf {} +
-          cd build && zip -qr -X ../LocalAIChat.zip "Local AI Chat"
-          unzip -l ../LocalAIChat.zip | tail -1
+          cd build && zip -qr -X ../LoAI.zip "LoAI"
+          unzip -l ../LoAI.zip | tail -1
 
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version || github.ref_name }}
         run: |
-          gh release create "$VERSION" LocalAIChat.zip \
+          gh release create "$VERSION" LoAI.zip \
             --target "$GITHUB_SHA" \
-            --title "Local AI Chat $VERSION" \
-            --notes "Download **LocalAIChat.zip**, unzip it, and double-click the Start file for Windows or Mac. The first run downloads Python and Ollama by itself. Full steps: [QUICK START.txt](https://github.com/${{ github.repository }}/blob/$VERSION/QUICK%20START.txt)."
+            --title "LoAI $VERSION" \
+            --notes "Download **LoAI.zip**, unzip it, and double-click the Start file for Windows or Mac. The first run downloads Python and Ollama by itself. Full steps: [QUICK START.txt](https://github.com/${{ github.repository }}/blob/$VERSION/QUICK%20START.txt)."

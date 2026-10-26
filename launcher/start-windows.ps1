@@ -1,6 +1,6 @@
-# Local AI Chat launcher for Windows.
+# LoAI launcher for Windows.
 #
-# Started by "Start Local AI Chat - Windows.bat". It makes sure the two things the app
+# Started by "Start LoAI - Windows.bat". It makes sure the two things the app
 # needs are present, downloading them the first time, then starts the app:
 #   1. Python, to run the app's web server. If Python 3.9+ is not installed, a private
 #      copy is downloaded into the "runtime" folder next to the app (nothing is installed
@@ -43,7 +43,7 @@ function Responds($url) {
 }
 
 Write-Host ""
-Write-Host "  Local AI Chat" -ForegroundColor Green
+Write-Host "  LoAI" -ForegroundColor Green
 Write-Host "  A private AI assistant that runs on this computer."
 
 # Already running? Just open the page.
@@ -172,7 +172,7 @@ if (-not (Responds "$OllamaUrl/api/version")) {
 Say "Ollama is running."
 
 # ---------- 3. The app ----------
-Step "Starting Local AI Chat"
+Step "Starting LoAI"
 Say "Your browser will open http://localhost:$Port"
 Say "The first time, click the button on that page to download an AI model."
 Say "Keep this window open while you use the app. Close it to stop the app."

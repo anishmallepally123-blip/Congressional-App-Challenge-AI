@@ -5,7 +5,7 @@ Notion connector: search, read and add to the Notion pages you share with it.
 
 Setup (about 2 minutes):
   1. Go to https://www.notion.so/profile/integrations and press "New integration".
-     Give it a name (e.g. Local AI Chat), pick your workspace, and choose "Internal".
+     Give it a name (e.g. LoAI), pick your workspace, and choose "Internal".
   2. Copy its "Internal Integration Secret" (starts with ntn_ or secret_) and paste it
      as NOTION_TOKEN on the Connectors page.
   3. In Notion, open each page the AI may use, press ••• > Connections, and add the

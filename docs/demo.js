@@ -3,7 +3,7 @@
 
 const WEBLLM_URL = "https://esm.run/@mlc-ai/web-llm@0.2.85";
 const SYSTEM_PROMPT =
-  "You are Local AI Chat, a friendly, helpful assistant running privately on the user's own device. " +
+  "You are LoAI, a friendly, helpful assistant running privately on the user's own device. " +
   "Answer clearly and concisely. Use Markdown for lists and code.";
 
 const $ = (id) => document.getElementById(id);
@@ -65,7 +65,7 @@ async function start() {
   $("suggestions").hidden = false;
   input.disabled = false;
   sendBtn.disabled = false;
-  input.placeholder = "Message Local AI Chat";
+  input.placeholder = "Message LoAI";
   input.focus();
 }
 

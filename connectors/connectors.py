@@ -357,7 +357,7 @@ class Manager:
         cfg = _expand(cfg)
         if name in self.user_started:
             # Only open a browser sign-in when the user asked, never in the middle of a chat.
-            cfg["env"] = {**cfg.get("env", {}), "LOCAL_AI_CHAT_SIGN_IN": "1"}
+            cfg["env"] = {**cfg.get("env", {}), "LOAI_SIGN_IN": "1"}
             self.user_started.discard(name)
         try:
             conn = mcp_client.connect(name, cfg)

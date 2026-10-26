@@ -25,7 +25,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-USER_AGENT = "LocalAIChat/1.0 (a student project; https://github.com/anishmallepally123-blip/Congressional-App-Challenge-AI)"
+USER_AGENT = "LoAI/1.0 (a student project; https://github.com/anishmallepally123-blip/Congressional-App-Challenge-AI)"
 
 
 class ToolError(Exception):
