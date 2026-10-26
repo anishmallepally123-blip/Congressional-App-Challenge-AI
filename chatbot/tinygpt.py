@@ -23,6 +23,7 @@ import threading
 import urllib.request
 from operator import mul
 
+PEEK_GUESSES = 5  # how many of its top guesses "Peek inside" shows for each character
 HERE = os.path.dirname(os.path.abspath(__file__))
 FILE_NAME = "tinygpt-shakespeare.bin"
 MODEL_DIR = os.path.join(os.path.expanduser("~"), ".local-ai-chat", "models")
@@ -190,8 +191,10 @@ class Model:
             logits = self.step(t, pos, cache)
         return logits, cache
 
-    def generate(self, prompt, max_chars=500, temperature=0.8, top_k=20, rng=random):
-        """Yield new characters one at a time, continuing the prompt."""
+    def generate(self, prompt, max_chars=500, temperature=0.8, top_k=20, rng=random, peek=False):
+        """Yield new characters one at a time, continuing the prompt.
+        With peek=True it yields (character, guesses) instead: the likeliest characters it
+        could have picked at that spot, as [character, chance] pairs, best first."""
         ids = self.encode(prompt) or [self.stoi.get("\n", 0)]
         window = self.block_size
         ids = ids[-window:]
@@ -204,10 +207,30 @@ class Model:
             weights = [math.exp((logits[i] - top) / temperature) for i in best]
             nxt = rng.choices(best, weights)[0]
             ids.append(nxt)
-            yield self.chars[nxt]
+            if peek:
+                total = sum(weights)
+                guesses = [[self.chars[i], round(wt / total, 3)] for i, wt in zip(best[:PEEK_GUESSES], weights)]
+                yield self.chars[nxt], guesses
+            else:
+                yield self.chars[nxt]
             if len(cache[0][0]) >= window:
                 # The model's memory is full. Start over from the newest half, so the
                 # positions stay within what it was trained on.
                 logits, cache = self.prime(ids[-(window // 2):])
             else:
                 logits = self.step(nxt, len(cache[0][0]), cache)
+
+
+class Peeking:
+    """A model whose generate() also adds its top guesses for each character to `guesses`."""
+
+    def __init__(self, model, guesses):
+        self.model, self.guesses = model, guesses
+
+    def __getattr__(self, name):
+        return getattr(self.model, name)
+
+    def generate(self, *args, **kwargs):
+        for ch, top in self.model.generate(*args, peek=True, **kwargs):
+            self.guesses.append(top)
+            yield ch

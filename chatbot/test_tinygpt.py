@@ -58,6 +58,17 @@ class ModelTests(unittest.TestCase):
         b = "".join(self.model.generate("Hi", 30, rng=random.Random(7)))
         self.assertEqual(a, b)
 
+    def test_peek_shows_its_top_guesses_without_changing_the_text(self):
+        plain = "".join(self.model.generate("Hi", 40, rng=random.Random(3)))
+        peeked = list(self.model.generate("Hi", 40, rng=random.Random(3), peek=True))
+        self.assertEqual("".join(ch for ch, _ in peeked), plain)
+        for _, guesses in peeked:
+            self.assertEqual(len(guesses), tinygpt.PEEK_GUESSES)
+            chances = [p for _, p in guesses]
+            self.assertEqual(chances, sorted(chances, reverse=True))
+            self.assertLessEqual(sum(chances), 1.001)
+            self.assertTrue(all(c in CHARS for c, _ in guesses))
+
     def test_cached_steps_match_a_fresh_pass(self):
         ids = self.model.encode("To be or not")
         _, cache = self.model.prime(ids[:-1])
@@ -122,6 +133,8 @@ class TinyGPTServerTests(unittest.TestCase):
         self.assertEqual(events[0]["name"], name)
         text = "".join(e["text"] for e in events if e["type"] == "text")
         self.assertGreaterEqual(len(text), 512)
+        guesses = [g for e in events if e["type"] == "peek" for g in e["guesses"]]
+        self.assertEqual(len(guesses), len(text))  # one list of guesses per character written
         notice = next(e for e in events if e["type"] == "notice")["text"]
         self.assertIn("Experimental", notice)
         self.assertIn("skipped characters", notice)

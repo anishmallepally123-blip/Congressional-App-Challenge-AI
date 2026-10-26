@@ -77,7 +77,7 @@ Browser (static/)  <-->  server.py (port 8000)  <-->  Ollama (port 11434)  <--> 
 - `models.py` holds the list of models and the rules for rating and locking them.
 - `phone.py` lets phones on the same Wi-Fi use the app after typing a code.
 - `personal.py` stores what you teach the AI on the Personalize page (`static/personal.html`) and adds it to each chat. See "Teaching the AI about you" below.
-- `tinygpt.py` downloads and runs TinyGPT, the experimental model trained from scratch in `../experiments/tiny-gpt`. It runs in plain Python inside the app instead of in Ollama, and continues your text in Shakespeare's style rather than answering questions.
+- `tinygpt.py` downloads and runs TinyGPT, the experimental model trained from scratch in `../experiments/tiny-gpt`. It runs in plain Python inside the app instead of in Ollama, and continues your text in Shakespeare's style rather than answering questions. Press **🔍 Peek inside** under its answer to see how sure it was about each letter and which letters it almost wrote instead.
 - `router.py` decides when a message is a bigger coding project that should go to a coding model.
 - `static/index.html`, `style.css` and `app.js` are the chat page. Chats are saved in the browser's local storage.
 - `static/markdown.js` turns the model's Markdown into formatted text. It is built in so the app works offline, and it escapes HTML so a reply can't run code in the page.
