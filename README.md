@@ -1,4 +1,4 @@
-# Local AI Chat
+# LoAI
 
 A private AI assistant that runs entirely on your own computer and is used through a web page. Built for the Congressional App Challenge.
 
@@ -22,10 +22,10 @@ Everything is written with only Python's standard library and plain JavaScript, 
 
 ## Quick start
 
-1. Download **LocalAIChat.zip** from the [latest release](https://github.com/anishmallepally123-blip/Congressional-App-Challenge-AI/releases/latest) and unzip it.
+1. Download **LoAI.zip** from the [latest release](https://github.com/anishmallepally123-blip/Congressional-App-Challenge-AI/releases/latest) and unzip it.
 2. Double-click the Start file in the new folder:
-   - **Windows:** `Start Local AI Chat - Windows`
-   - **Mac:** `Start Local AI Chat - Mac`
+   - **Windows:** `Start LoAI - Windows`
+   - **Mac:** `Start LoAI - Mac`
 3. The first time, it downloads Python and [Ollama](https://ollama.com) by itself (no admin password, nothing else to install). Your browser then opens **http://localhost:8000**, where one click downloads an AI model that fits your computer.
 
 Step-by-step instructions, including what to click on the Windows and Mac security prompts, are in [QUICK START.txt](QUICK%20START.txt). The project website is at **https://anishmallepally123-blip.github.io/Congressional-App-Challenge-AI/**.

@@ -1,4 +1,4 @@
-# Local AI Chat
+# LoAI
 
 A Claude-style chatbot that runs entirely on your own computer. The AI model runs locally through [Ollama](https://ollama.com), and you chat with it in your web browser. No internet connection or account is needed once the model is downloaded, and your chats never leave your computer.
 

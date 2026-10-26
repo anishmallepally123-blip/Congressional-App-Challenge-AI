@@ -1,5 +1,5 @@
 """
-Local AI Chat - a tiny web server for a chatbot that runs entirely on your computer.
+LoAI - a tiny web server for a chatbot that runs entirely on your computer.
 
 It does three jobs:
   1. Serves the chat web page (the files in the "static" folder).
@@ -678,7 +678,7 @@ def main():
     hardware.detect()  # check the computer once at startup so the page loads quickly
     server = ThreadingHTTPServer(("127.0.0.1", PORT), ChatHandler)
     url = f"http://localhost:{PORT}"
-    print(f"Local AI Chat is running at {url}")
+    print(f"LoAI is running at {url}")
     phone.restore(ChatHandler, PORT)
     if phone.address():
         print(f"Phones on your Wi-Fi can use it at http://{phone.address()}:{PORT} (code {phone.status(PORT)['code']})")

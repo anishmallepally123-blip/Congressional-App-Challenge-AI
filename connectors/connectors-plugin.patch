@@ -110,7 +110,7 @@ diff -ru chatbot/static/index.html
 --- chatbot/static/index.html	2026-10-04 08:10:48.101145146 +0000
 +++ chatbot/static/index.html	2026-10-04 08:10:48.505013620 +0000
 @@ -6,6 +6,7 @@
-   <title>Local AI Chat</title>
+   <title>LoAI</title>
    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
    <link rel="stylesheet" href="style.css">
 +  <link rel="stylesheet" href="/connectors/tool-chat.css">

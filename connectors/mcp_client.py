@@ -26,7 +26,7 @@ import urllib.request
 from collections import deque
 
 PROTOCOL_VERSION = "2025-06-18"
-CLIENT_INFO = {"name": "local-ai-chat", "version": "1.0"}
+CLIENT_INFO = {"name": "loai", "version": "1.0"}
 START_TIMEOUT = 120  # the first `npx -y ...` run downloads the package, which can be slow
 CALL_TIMEOUT = 120
 

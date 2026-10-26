@@ -103,10 +103,10 @@ def sign_in():
             result["code"] = q.get("code", [""])[0]
             result["error"] = q.get("error", [""])[0]
             ok = bool(result["code"])
-            body = (f"<!doctype html><meta charset=utf-8><title>Local AI Chat</title>"
+            body = (f"<!doctype html><meta charset=utf-8><title>LoAI</title>"
                     f"<body style='font-family:system-ui;padding:3em;text-align:center'>"
                     f"<h2>{'Signed in to Google' if ok else 'Google sign-in was cancelled'}</h2>"
-                    f"<p>You can close this tab and go back to Local AI Chat.</p>").encode()
+                    f"<p>You can close this tab and go back to LoAI.</p>").encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
@@ -175,7 +175,7 @@ def google(url, raw=False):
     try:
         if raw:
             import urllib.request
-            req = urllib.request.Request(url, headers={**headers, "User-Agent": "LocalAIChat/1.0"})
+            req = urllib.request.Request(url, headers={**headers, "User-Agent": "LoAI/1.0"})
             with urllib.request.urlopen(req, timeout=60) as resp:
                 return resp.read(MAX_CHARS * 4).decode("utf-8", "replace")
         return http_json(url, headers=headers, service="Google")
@@ -318,7 +318,7 @@ if __name__ == "__main__":
         setup_error("GOOGLE_CLIENT_ID should end in .apps.googleusercontent.com. Copy the Client ID of a "
                     "Desktop app OAuth client from console.cloud.google.com > APIs & Services > Credentials.")
     if not _load_token():
-        if os.environ.get("LOCAL_AI_CHAT_SIGN_IN") != "1":
+        if os.environ.get("LOAI_SIGN_IN") != "1":
             setup_error("Not signed in to Google yet. Press Reconnect on this connector to sign in.")
         sign_in()
     drive_tools() if SERVICE == "drive" else calendar_tools()

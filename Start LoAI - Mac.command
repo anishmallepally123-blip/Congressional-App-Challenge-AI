@@ -1,5 +1,5 @@
 #!/bin/bash
-# Double-click this file to start Local AI Chat on a Mac.
+# Double-click this file to start LoAI on a Mac.
 #
 # The first time, it gets the two things the app needs, then starts the app:
 #   1. Python, to run the app's web server. If Python 3.9+ isn't installed, a private copy
@@ -28,7 +28,7 @@ fail() {
 responds() { curl -fsS -m 2 "$1" >/dev/null 2>&1; }
 
 echo
-echo "  Local AI Chat"
+echo "  LoAI"
 echo "  A private AI assistant that runs on this computer."
 
 # Already running? Just open the page.
@@ -133,7 +133,7 @@ if [ -n "$OLLAMA_PID" ]; then
 fi
 
 # ---------- 3. The app ----------
-step "Starting Local AI Chat"
+step "Starting LoAI"
 say "Your browser will open http://localhost:$PORT"
 say "The first time, click the button on that page to download an AI model."
 say "Keep this window open while you use the app. Close it to stop the app."
